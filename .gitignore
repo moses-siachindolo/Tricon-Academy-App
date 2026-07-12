@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Archives / local packages
+*.zip
+Carthage/Build/
+Pods/
+*.playground
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Secrets / env
+.env
+*.pem
+GoogleService-Info.plist
