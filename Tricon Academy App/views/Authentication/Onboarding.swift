@@ -20,7 +20,7 @@ struct OnboardingView: View {
         OnboardingPage(
             badge: "TRICON ACADEMY",
             title: "Learn today,\nlead tomorrow",
-            subtitle: "Your complete study companion for Form 1 through A-Level — papers, notes, and video lessons in one place.",
+            subtitle: "Your complete study companion for Form 1–4 — papers, notes, and video lessons in one place.",
             accent: Color(red: 0.12, green: 0.62, blue: 0.36),
             accentSoft: Color(red: 0.88, green: 0.96, blue: 0.91),
             illustration: .welcome
@@ -374,8 +374,8 @@ private struct WelcomeIllustration: View {
             }
 
             HStack(spacing: 10) {
-                miniChip(icon: "book.fill", label: "Form 1–3")
-                miniChip(icon: "rosette", label: "A-Level")
+                miniChip(icon: "book.fill", label: "Form 1–4")
+                miniChip(icon: "doc.text.fill", label: "Papers")
                 miniChip(icon: "person.2.fill", label: "Tutors")
             }
         }
@@ -570,6 +570,7 @@ private struct ProgressIllustration: View {
                                 .foregroundColor(Color.black.opacity(0.4))
                         }
                     }
+                
                 }
                 .frame(maxWidth: .infinity)
             }

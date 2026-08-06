@@ -3,14 +3,19 @@ import SwiftUI
 struct HomeView: View {
 
     @EnvironmentObject private var authManager: AuthManager
-    @ObservedObject private var stats = StatsManager.shared
     @Binding var selectedTab: Int
 
     @State private var searchText = ""
-    @State private var currentQuote: String = HomeView.quotes.randomElement() ?? ""
     @State private var showUploadSheet = false
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    // MARK: - Brand palette
+
+    private let brand = AppTheme.brand
+    private let brandDeep = AppTheme.brandDeep
+    private let brandSoft = AppTheme.brandSoft
+    private let canvas = AppTheme.canvas
+    private let ink = AppTheme.ink
+    private let muted = AppTheme.muted
 
     /// Profile tab index: staff have Manage at 3, so Profile is 4.
     private var profileTabIndex: Int {
@@ -19,14 +24,14 @@ struct HomeView: View {
 
     private var manageTabIndex: Int { 3 }
 
-    static let quotes = [
-        "Education is the most powerful weapon which you can use to change the world.",
-        "Success is the sum of small efforts, repeated day in and day out.",
-        "The beautiful thing about learning is that no one can take it away from you.",
-        "Push yourself, because no one else is going to do it for you.",
-        "Don't watch the clock; do what it does. Keep going.",
-        "Believe you can and you're halfway there."
-    ]
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default: return "Good evening"
+        }
+    }
 
     init(selectedTab: Binding<Int> = .constant(0)) {
         _selectedTab = selectedTab
@@ -39,7 +44,7 @@ struct HomeView: View {
     private var filteredLevels: [Level] {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
-        return Level.allCases.filter { $0.rawValue.localizedCaseInsensitiveContains(q) }
+        return Level.activeCases.filter { $0.rawValue.localizedCaseInsensitiveContains(q) }
     }
 
     private var filteredSubjects: [Subject] {
@@ -49,112 +54,41 @@ struct HomeView: View {
         let optionals = optionalSubjects.filter { $0.name.localizedCaseInsensitiveContains(q) }
         return core + optionals
     }
-
+ 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
 
-                // MARK: Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Welcome back,")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        Text(authManager.currentUser?.fullName ?? "Student")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
+                header
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                    .padding(.top, 8)
 
-                    Spacer()
-
-                    Button {
-                        selectedTab = profileTabIndex
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.green.opacity(0.15))
-                                .frame(width: 46, height: 46)
-                            Text(initials)
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.green)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open profile")
-                }
-                .padding(.horizontal, 22)
-                .padding(.top, 10)
-
-                // Staff-only shortcut: upload + open Manage tab
                 if authManager.currentUser?.canManageContent == true {
-                    HStack(spacing: 10) {
-                        Button {
-                            showUploadSheet = true
-                        } label: {
-                            Label("Upload", systemImage: "arrow.up.doc.fill")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(Color.green)
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-
-                        Button {
-                            selectedTab = manageTabIndex
-                        } label: {
-                            Label("Manage", systemImage: "slider.horizontal.3")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(Color.green.opacity(0.12))
-                                .foregroundColor(.green)
-                                .cornerRadius(12)
-                        }
-                    }
-                    .padding(.horizontal, 22)
+                    staffActions
+                        .padding(.horizontal, AppTheme.horizontalPadding)
                 }
 
-                // MARK: Search
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
-                        .accessibilityHidden(true)
-                    TextField("Search subjects, levels, topics", text: $searchText)
-                        .font(.subheadline)
-                        .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true)
-                    if isSearching {
-                        Button {
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.gray)
-                        }
-                        .accessibilityLabel("Clear search")
-                    }
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal, 22)
+                searchBar
+                    .padding(.horizontal, AppTheme.horizontalPadding)
 
                 if isSearching {
                     searchResultsSection
                 } else {
-                    homeContent
+                    gradesSection
+                    librarySection
+                    quickAccessSection
                 }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 28)
         }
+        .background(canvas.ignoresSafeArea())
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             StatsManager.shared.recordAppActive()
+            // Warm the offline library catalogue before the user opens Library
+            // (avoids static re-entry when NavigationLink destinations evaluate).
+            TriconAcademyLibrary.preload()
         }
         .sheet(isPresented: $showUploadSheet) {
             UploadLessonView()
@@ -162,108 +96,282 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Default home content
+    // MARK: - Header
 
-    @ViewBuilder
-    private var homeContent: some View {
-        // Level Grid
+    private var header: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(greeting)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(muted)
+                Text(authManager.currentUser?.fullName ?? "Student")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(ink)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                selectedTab = profileTabIndex
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [brand, brandDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                        .shadow(color: brand.opacity(0.28), radius: 10, x: 0, y: 5)
+
+                    Text(initials)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open profile")
+        }
+    }
+
+    private var staffActions: some View {
+        HStack(spacing: 10) {
+            Button {
+                showUploadSheet = true
+            } label: {
+                Label("Upload", systemImage: "arrow.up.doc.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(
+                        LinearGradient(
+                            colors: [brand, brandDeep],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: brand.opacity(0.25), radius: 10, x: 0, y: 5)
+            }
+
+            Button {
+                selectedTab = manageTabIndex
+            } label: {
+                Label("Manage", systemImage: "slider.horizontal.3")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(brandSoft)
+                    .foregroundColor(brandDeep)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(brand.opacity(0.18), lineWidth: 1)
+                    )
+            }
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(muted)
+                .accessibilityHidden(true)
+
+            TextField("Search subjects, levels, topics", text: $searchText)
+                .font(.system(size: 15))
+                .foregroundColor(ink)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+
+            if isSearching {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(muted.opacity(0.7))
+                }
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.vertical, 13)
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(AppTheme.stroke, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
+    }
+
+    // MARK: - Grades (simple modern squares)
+
+    private var gradesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LevelPickerHeader(
+                title: "Your grades",
+                subtitle: "Select a form to open subjects, papers, notes, and videos."
+            )
+            .padding(.horizontal, AppTheme.horizontalPadding)
+
+            LevelPickerGrid { level in
+                SubjectListView(level: level)
+            }
+            .padding(.horizontal, AppTheme.horizontalPadding)
+        }
+    }
+
+    // MARK: - Tricon Academy Library (Home only)
+
+    private var librarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Choose your level")
-                .font(.headline)
-                .padding(.horizontal, 22)
+            Text("Tricon Academy Library")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(ink)
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
-            LazyVGrid(columns: columns, spacing: 14) {
-                ForEach(Level.allCases) { level in
-                    NavigationLink(destination: SubjectListView(level: level)) {
-                        levelCard(level: level)
+            NavigationLink {
+                // Sample catalogue + admin-approved staff books.
+                // Tutor submissions stay hidden until an admin verifies them.
+                TriconAcademyLibraryView()
+            } label: {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(brandSoft)
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "books.vertical.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(brandDeep)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Browse the library")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(ink)
+                        Text("Tech · Science · Business · Stories")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundColor(muted)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(muted.opacity(0.75))
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(brand.opacity(0.12), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, AppTheme.horizontalPadding)
+        }
+        .padding(.top, 2)
+    }
+
+    // MARK: - Quick access (compact)
+
+    private var quickAccessSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick access")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(ink)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    quickChip(
+                        icon: "doc.text.fill",
+                        title: "Papers",
+                        color: Color(red: 0.20, green: 0.48, blue: 0.92),
+                        destination: BrowseLevelsView(
+                            title: "Papers",
+                            subtitle: "Choose a level to browse past papers.",
+                            targetTab: 0
+                        )
+                    )
+                    quickChip(
+                        icon: "note.text",
+                        title: "Notes",
+                        color: Color(red: 0.10, green: 0.62, blue: 0.55),
+                        destination: BrowseLevelsView(
+                            title: "Notes",
+                            subtitle: "Choose a level to browse notes.",
+                            targetTab: 1
+                        )
+                    )
+                    quickChip(
+                        icon: "play.rectangle.fill",
+                        title: "Videos",
+                        color: Color(red: 0.52, green: 0.32, blue: 0.88),
+                        destination: BrowseLevelsView(
+                            title: "Videos",
+                            subtitle: "Choose a level to browse videos.",
+                            targetTab: 2
+                        )
+                    )
+
+                    Button {
+                        selectedTab = 2
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "bookmark.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Saved")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(Color(red: 0.95, green: 0.48, blue: 0.18))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule().fill(Color(red: 0.95, green: 0.48, blue: 0.18).opacity(0.12))
+                        )
                     }
                     .buttonStyle(.plain)
                 }
+                .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.horizontal, 22)
         }
+        .padding(.top, 4)
+    }
 
-        // Motivational Quote Banner
-        Button {
-            withAnimation {
-                currentQuote = HomeView.quotes.randomElement() ?? currentQuote
+    private func quickChip<Destination: View>(
+        icon: String,
+        title: String,
+        color: Color,
+        destination: Destination
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
             }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 18))
-                    .foregroundColor(Color(red: 0.75, green: 0.9, blue: 0.75))
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(currentQuote)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
-
-                    Text("Tap for another")
-                        .font(.caption2)
-                        .foregroundColor(.white.opacity(0.65))
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [Color(red: 0.05, green: 0.22, blue: 0.15), Color(red: 0.02, green: 0.12, blue: 0.08)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(16)
+            .foregroundColor(color)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Capsule().fill(color.opacity(0.12)))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 22)
-        .accessibilityLabel("Motivational quote. Tap for another.")
-
-        // This Week Stats
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This week")
-                .font(.headline)
-                .padding(.horizontal, 22)
-
-            HStack(spacing: 10) {
-                statCard(icon: "doc.text.fill", value: "\(stats.papersSolvedThisWeek)", label: "Papers opened", color: .blue)
-                statCard(icon: "play.rectangle.fill", value: "\(stats.videosWatchedThisWeek)", label: "Videos watched", color: .purple)
-                statCard(icon: "flame.fill", value: "\(stats.dayStreak)", label: "Day streak", color: .orange)
-            }
-            .padding(.horizontal, 22)
-        }
-
-        // Quick Access
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Quick access")
-                .font(.headline)
-                .padding(.horizontal, 22)
-
-            HStack(spacing: 10) {
-                quickAccessCard(
-                    icon: "doc.text.fill", title: "Papers", color: .blue,
-                    destination: BrowseLevelsView(title: "Papers", subtitle: "Choose a level to browse past papers.", targetTab: 0)
-                )
-                Button {
-                    selectedTab = 2
-                } label: {
-                    quickAccessLabel(icon: "bookmark.fill", title: "Saved", color: .orange)
-                }
-                .buttonStyle(.plain)
-                quickAccessCard(
-                    icon: "play.rectangle.fill", title: "Videos", color: .purple,
-                    destination: BrowseLevelsView(title: "Videos", subtitle: "Choose a level to browse videos.", targetTab: 2)
-                )
-                quickAccessCard(
-                    icon: "note.text", title: "Notes", color: .teal,
-                    destination: BrowseLevelsView(title: "Notes", subtitle: "Choose a level to browse notes.", targetTab: 1)
-                )
-            }
-            .padding(.horizontal, 22)
-        }
     }
 
     // MARK: - Search results
@@ -272,77 +380,89 @@ struct HomeView: View {
     private var searchResultsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             if filteredLevels.isEmpty && filteredSubjects.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 32))
-                        .foregroundColor(.gray)
+                VStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(brandSoft)
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundColor(brandDeep)
+                    }
                     Text("No results for “\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))”")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Text("Try a subject name like Physics, or a level like Form 1.")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(ink)
+                    Text("Try a subject like Physics, or a level like Form 1.")
+                        .font(.system(size: 13))
+                        .foregroundColor(muted)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-                .padding(.horizontal, 22)
+                .padding(.vertical, 48)
+                .padding(.horizontal, AppTheme.horizontalPadding)
             } else {
                 if !filteredLevels.isEmpty {
                     Text("Levels")
-                        .font(.headline)
-                        .padding(.horizontal, 22)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(ink)
+                        .padding(.horizontal, AppTheme.horizontalPadding)
 
-                    LazyVGrid(columns: columns, spacing: 14) {
+                    VStack(spacing: 12) {
                         ForEach(filteredLevels) { level in
                             NavigationLink(destination: SubjectListView(level: level)) {
-                                levelCard(level: level)
+                                LevelTile(level: level, style: .row)
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 22)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
                 }
 
                 if !filteredSubjects.isEmpty {
                     Text("Subjects")
-                        .font(.headline)
-                        .padding(.horizontal, 22)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(ink)
+                        .padding(.horizontal, AppTheme.horizontalPadding)
 
                     VStack(spacing: 10) {
                         ForEach(filteredSubjects) { subject in
                             NavigationLink(destination: SubjectLevelPickerView(subject: subject)) {
                                 HStack(spacing: 14) {
                                     ZStack {
-                                        Circle()
-                                            .fill(subject.swiftUIColor.opacity(0.15))
-                                            .frame(width: 40, height: 40)
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(subject.swiftUIColor.opacity(0.14))
+                                            .frame(width: 44, height: 44)
                                         Image(systemName: subject.icon)
-                                            .font(.system(size: 16))
+                                            .font(.system(size: 17, weight: .semibold))
                                             .foregroundColor(subject.swiftUIColor)
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(subject.name)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primary)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(ink)
                                         Text("Choose a level to open")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(muted)
                                     }
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .font(.footnote)
-                                        .foregroundColor(.gray)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(muted.opacity(0.7))
                                 }
                                 .padding(12)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(AppTheme.card)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(AppTheme.stroke, lineWidth: 1)
+                                )
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 22)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
                 }
             }
         }
@@ -353,83 +473,6 @@ struct HomeView: View {
         let parts = name.split(separator: " ")
         let letters = parts.prefix(2).compactMap { $0.first }
         return String(letters).uppercased()
-    }
-
-    @ViewBuilder
-    private func levelCard(level: Level) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: level.icon)
-                .font(.system(size: 30))
-                .foregroundColor(.green)
-
-            Text(level.rawValue)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-
-            Text("\(allSubjects.count) subjects")
-                .font(.caption2)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 110)
-        .background(Color(.systemGray6))
-        .cornerRadius(16)
-    }
-
-    @ViewBuilder
-    private func statCard(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundColor(color)
-
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.gray)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 90)
-        .background(Color(.systemGray6))
-        .cornerRadius(14)
-    }
-
-    private func quickAccessCard<Destination: View>(icon: String, title: String, color: Color, destination: Destination) -> some View {
-        NavigationLink(destination: destination) {
-            quickAccessLabel(icon: icon, title: title, color: color)
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func quickAccessLabel(icon: String, title: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.15))
-                    .frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(color)
-            }
-
-            Text(title)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundColor(.primary)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 68)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .contentShape(Rectangle())
     }
 }
 

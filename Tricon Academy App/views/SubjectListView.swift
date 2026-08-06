@@ -5,9 +5,10 @@ struct SubjectListView: View {
     let level: Level
     var initialTab: Int = 0
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
-    private let horizontalPadding: CGFloat = 22
-    private let gridSpacing: CGFloat = 16
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
     /// Core subjects excluding the Optionals folder entry (handled separately).
     private var coreSubjects: [Subject] {
@@ -19,14 +20,19 @@ struct SubjectListView: View {
     }
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Pick a subject for \(level.rawValue).")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, horizontalPadding)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Subjects")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(AppTheme.ink)
+                    Text("Pick a subject for \(level.rawValue) — papers, notes, and video lessons.")
+                        .font(.system(size: 13))
+                        .foregroundColor(AppTheme.muted)
+                }
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
-                LazyVGrid(columns: columns, spacing: gridSpacing) {
+                LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(coreSubjects) { subject in
                         NavigationLink(destination: ContentHubView(level: level, subject: subject, initialTab: initialTab)) {
                             SubjectCardView(subject: subject)
@@ -35,18 +41,18 @@ struct SubjectListView: View {
                     }
 
                     if let optionalsSubject {
-                        NavigationLink(destination: OptionalsListView(level: level)) {
+                        NavigationLink(destination: OptionalsListView(level: level, initialTab: initialTab)) {
                             SubjectCardView(subject: optionalsSubject)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, horizontalPadding)
+                .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(AppTheme.canvas.ignoresSafeArea())
         .navigationTitle(level.rawValue)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -55,7 +61,7 @@ struct SubjectListView: View {
 struct SubjectListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            SubjectListView(level: .form1)
+            SubjectListView(level: .form4)
         }
     }
 }

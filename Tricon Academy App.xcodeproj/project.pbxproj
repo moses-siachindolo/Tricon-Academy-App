@@ -13,8 +13,8 @@
 		A609457A2FFAEDF3000482FF /* CurriculumModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945792FFAEDF3000482FF /* CurriculumModels.swift */; };
 		A609457C2FFAEF77000482FF /* CurriculumData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A609457B2FFAEF77000482FF /* CurriculumData.swift */; };
 		A60945802FFAF1D5000482FF /* SubjectListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A609457F2FFAF1D5000482FF /* SubjectListView.swift */; };
-		A60945822FFAF2D8000482FF /* ContentHubView.swift .swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945812FFAF2D8000482FF /* ContentHubView.swift .swift */; };
-		A60945842FFAF330000482FF /* PDFViewerScreen.swift  .swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945832FFAF330000482FF /* PDFViewerScreen.swift  .swift */; };
+		A60945822FFAF2D8000482FF /* ContentHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945812FFAF2D8000482FF /* ContentHubView.swift */; };
+		A60945842FFAF330000482FF /* PDFViewerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945832FFAF330000482FF /* PDFViewerScreen.swift */; };
 		A60945862FFAF396000482FF /* VideoPlayerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60945852FFAF396000482FF /* VideoPlayerScreen.swift */; };
 		A653EFEC3001D6B000059F79 /* OptionalsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A653EFEB3001D6B000059F79 /* OptionalsListView.swift */; };
 		A653EFEE3001D74B00059F79 /* SubjectCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A653EFED3001D74B00059F79 /* SubjectCardView.swift */; };
@@ -26,8 +26,6 @@
 		A654082A2FF9BFB000FE3C33 /* Tricon_Academy_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65408292FF9BFB000FE3C33 /* Tricon_Academy_AppApp.swift */; };
 		A654082E2FF9BFB300FE3C33 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A654082D2FF9BFB300FE3C33 /* Assets.xcassets */; };
 		A65408312FF9BFB300FE3C33 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A65408302FF9BFB300FE3C33 /* Preview Assets.xcassets */; };
-		A65408332FF9BFB300FE3C33 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65408322FF9BFB300FE3C33 /* Persistence.swift */; };
-		A65408362FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A65408342FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodeld */; };
 		A65408402FF9BFB400FE3C33 /* Tricon_Academy_AppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A654083F2FF9BFB400FE3C33 /* Tricon_Academy_AppTests.swift */; };
 		A654084A2FF9BFB400FE3C33 /* Tricon_Academy_AppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65408492FF9BFB400FE3C33 /* Tricon_Academy_AppUITests.swift */; };
 		A654084C2FF9BFB400FE3C33 /* Tricon_Academy_AppUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A654084B2FF9BFB400FE3C33 /* Tricon_Academy_AppUITestsLaunchTests.swift */; };
@@ -41,7 +39,25 @@
 		A6B1C0053003A00300059F79 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B1C0043003A00300059F79 /* BrowseView.swift */; };
 		A7E10001200A000100059F79 /* EmailConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10000200A000100059F79 /* EmailConfig.swift */; };
 		A7E10003200A000200059F79 /* EmailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10002200A000200059F79 /* EmailService.swift */; };
-		A7E10005200A000300059F79 /* SocialAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10004200A000300059F79 /* SocialAuthService.swift */; };
+		A8F10001200B000100059F79 /* SavedItemsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F10000200B000100059F79 /* SavedItemsManager.swift */; };
+		A8F10003200B000200059F79 /* ContentLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F10002200B000200059F79 /* ContentLibrary.swift */; };
+		A9C10001200C000100059F79 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10000200C000100059F79 /* AppSettings.swift */; };
+		A9C10003200C000200059F79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10002200C000200059F79 /* SettingsView.swift */; };
+		A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20000200E000100059F79 /* SupabaseConfig.swift */; };
+		A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20002200E000200059F79 /* SupabaseClient.swift */; };
+		A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20004200E000300059F79 /* SupabaseModels.swift */; };
+		A9S30001200F000100059F79 /* ResetPasswordConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */; };
+		A9L400012010000100059F79 /* LevelPickerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L400002010000100059F79 /* LevelPickerComponents.swift */; };
+		A9L500012011000100059F79 /* LibraryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L500002011000100059F79 /* LibraryModels.swift */; };
+		A9L500032011000200059F79 /* TriconAcademyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */; };
+		A9L600012012000100059F79 /* StudentWelcomeOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L600002012000100059F79 /* StudentWelcomeOnboardingView.swift */; };
+		A9L600032012000200059F79 /* StudentsAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L600022012000200059F79 /* StudentsAdminView.swift */; };
+		A9L700012013000100059F79 /* SuperAdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L700002013000100059F79 /* SuperAdminDashboardView.swift */; };
+		A9L800012014000100059F79 /* TutorApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L800002014000100059F79 /* TutorApplicationView.swift */; };
+		A9L800032014000200059F79 /* AcademySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L800022014000200059F79 /* AcademySupport.swift */; };
+		A9L900012015000100059F79 /* LibraryBookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L900002015000100059F79 /* LibraryBookStore.swift */; };
+		A9LB00012016000100059F79 /* UploadLibraryBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9LB00002016000100059F79 /* UploadLibraryBookView.swift */; };
+		A9LB00032016000200059F79 /* LibraryBookReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9LB00022016000200059F79 /* LibraryBookReviewView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,8 +84,8 @@
 		A60945792FFAEDF3000482FF /* CurriculumModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurriculumModels.swift; sourceTree = "<group>"; };
 		A609457B2FFAEF77000482FF /* CurriculumData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurriculumData.swift; sourceTree = "<group>"; };
 		A609457F2FFAF1D5000482FF /* SubjectListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectListView.swift; sourceTree = "<group>"; };
-		A60945812FFAF2D8000482FF /* ContentHubView.swift .swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentHubView.swift .swift"; sourceTree = "<group>"; };
-		A60945832FFAF330000482FF /* PDFViewerScreen.swift  .swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PDFViewerScreen.swift  .swift"; sourceTree = "<group>"; };
+		A60945812FFAF2D8000482FF /* ContentHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentHubView.swift; sourceTree = "<group>"; };
+		A60945832FFAF330000482FF /* PDFViewerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewerScreen.swift; sourceTree = "<group>"; };
 		A60945852FFAF396000482FF /* VideoPlayerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerScreen.swift; sourceTree = "<group>"; };
 		A653EFEB3001D6B000059F79 /* OptionalsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalsListView.swift; sourceTree = "<group>"; };
 		A653EFED3001D74B00059F79 /* SubjectCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectCardView.swift; sourceTree = "<group>"; };
@@ -82,8 +98,6 @@
 		A65408292FF9BFB000FE3C33 /* Tricon_Academy_AppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tricon_Academy_AppApp.swift; sourceTree = "<group>"; };
 		A654082D2FF9BFB300FE3C33 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A65408302FF9BFB300FE3C33 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		A65408322FF9BFB300FE3C33 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
-		A65408352FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Tricon_Academy_App.xcdatamodel; sourceTree = "<group>"; };
 		A654083B2FF9BFB400FE3C33 /* Tricon Academy AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Tricon Academy AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A654083F2FF9BFB400FE3C33 /* Tricon_Academy_AppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tricon_Academy_AppTests.swift; sourceTree = "<group>"; };
 		A65408452FF9BFB400FE3C33 /* Tricon Academy AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Tricon Academy AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,8 +113,27 @@
 		A6B1C0043003A00300059F79 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
 		A7E10000200A000100059F79 /* EmailConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailConfig.swift; sourceTree = "<group>"; };
 		A7E10002200A000200059F79 /* EmailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailService.swift; sourceTree = "<group>"; };
-		A7E10004200A000300059F79 /* SocialAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialAuthService.swift; sourceTree = "<group>"; };
 		A7E10006200A000400059F79 /* Tricon_Academy_App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tricon_Academy_App.entitlements; sourceTree = "<group>"; };
+		A8F10000200B000100059F79 /* SavedItemsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedItemsManager.swift; sourceTree = "<group>"; };
+		A8F10002200B000200059F79 /* ContentLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentLibrary.swift; sourceTree = "<group>"; };
+		A9C10000200C000100059F79 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A9C10002200C000200059F79 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A9S20000200E000100059F79 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		A9S20002200E000200059F79 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		A9S20004200E000300059F79 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
+		A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordConfirmView.swift; sourceTree = "<group>"; };
+		A9S30002200F000200059F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A9L400002010000100059F79 /* LevelPickerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelPickerComponents.swift; sourceTree = "<group>"; };
+		A9L500002011000100059F79 /* LibraryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModels.swift; sourceTree = "<group>"; };
+		A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriconAcademyLibraryView.swift; sourceTree = "<group>"; };
+		A9L600002012000100059F79 /* StudentWelcomeOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudentWelcomeOnboardingView.swift; sourceTree = "<group>"; };
+		A9L600022012000200059F79 /* StudentsAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudentsAdminView.swift; sourceTree = "<group>"; };
+		A9L700002013000100059F79 /* SuperAdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperAdminDashboardView.swift; sourceTree = "<group>"; };
+		A9L800002014000100059F79 /* TutorApplicationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorApplicationView.swift; sourceTree = "<group>"; };
+		A9L800022014000200059F79 /* AcademySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcademySupport.swift; sourceTree = "<group>"; };
+		A9L900002015000100059F79 /* LibraryBookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookStore.swift; sourceTree = "<group>"; };
+		A9LB00002016000100059F79 /* UploadLibraryBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadLibraryBookView.swift; sourceTree = "<group>"; };
+		A9LB00022016000200059F79 /* LibraryBookReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookReviewView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -164,10 +197,9 @@
 				A65408582FF9BFCB00FE3C33 /* Model */,
 				A65408292FF9BFB000FE3C33 /* Tricon_Academy_AppApp.swift */,
 				A654082D2FF9BFB300FE3C33 /* Assets.xcassets */,
-				A65408322FF9BFB300FE3C33 /* Persistence.swift */,
 				A60945742FFA6313000482FF /* AuthManger.swift */,
 				A7E10006200A000400059F79 /* Tricon_Academy_App.entitlements */,
-				A65408342FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodeld */,
+				A9S30002200F000200059F79 /* Info.plist */,
 				A654082F2FF9BFB300FE3C33 /* Preview Content */,
 			);
 			path = "Tricon Academy App";
@@ -202,13 +234,29 @@
 			isa = PBXGroup;
 			children = (
 				A60945782FFAED8F000482FF /* Curriculum */,
+				A9S20006200E000400059F79 /* Supabase */,
+				A9L500002011000100059F79 /* LibraryModels.swift */,
+				A9L800022014000200059F79 /* AcademySupport.swift */,
+				A9L900002015000100059F79 /* LibraryBookStore.swift */,
 				A60945722FFA6272000482FF /* User.swift */,
 				A653EFF130025F3900059F79 /* StatsManager.swift */,
+				A8F10000200B000100059F79 /* SavedItemsManager.swift */,
+				A8F10002200B000200059F79 /* ContentLibrary.swift */,
+				A9C10000200C000100059F79 /* AppSettings.swift */,
 				A7E10000200A000100059F79 /* EmailConfig.swift */,
 				A7E10002200A000200059F79 /* EmailService.swift */,
-				A7E10004200A000300059F79 /* SocialAuthService.swift */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		A9S20006200E000400059F79 /* Supabase */ = {
+			isa = PBXGroup;
+			children = (
+				A9S20000200E000100059F79 /* SupabaseConfig.swift */,
+				A9S20002200E000200059F79 /* SupabaseClient.swift */,
+				A9S20004200E000300059F79 /* SupabaseModels.swift */,
+			);
+			path = Supabase;
 			sourceTree = "<group>";
 		};
 		A65408592FF9BFD800FE3C33 /* views */ = {
@@ -218,12 +266,15 @@
 				A6B1C0003003A00100059F79 /* MainTabView.swift */,
 				A6B1C0043003A00300059F79 /* BrowseView.swift */,
 				A6B1C0023003A00200059F79 /* ProfileView.swift */,
+				A9C10002200C000200059F79 /* SettingsView.swift */,
+				A9L400002010000100059F79 /* LevelPickerComponents.swift */,
+				A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */,
 				A609457F2FFAF1D5000482FF /* SubjectListView.swift */,
-				A60945812FFAF2D8000482FF /* ContentHubView.swift .swift */,
-				A60945832FFAF330000482FF /* PDFViewerScreen.swift  .swift */,
+				A60945812FFAF2D8000482FF /* ContentHubView.swift */,
+				A60945832FFAF330000482FF /* PDFViewerScreen.swift */,
 				A60945852FFAF396000482FF /* VideoPlayerScreen.swift */,
-				A653EFEB3001D6B000059F79 /* OptionalsListView.swift */,
 				A653EFED3001D74B00059F79 /* SubjectCardView.swift */,
+				A653EFEB3001D6B000059F79 /* OptionalsListView.swift */,
 				A653EFEF3001FE9300059F79 /* PapersLibraryView.swift */,
 				A653EFF53002609300059F79 /* BrowseLevelsView.swift */,
 				A653EFF7300260DD00059F79 /* SavedItemsView.swift */,
@@ -238,9 +289,16 @@
 				A67115C92FFA3F69008822FE /* Onboarding.swift */,
 				A67115CD2FFA3FBF008822FE /* LoginView.swift */,
 				A67115CB2FFA3F91008822FE /* RegisterView.swift */,
+				A9L600002012000100059F79 /* StudentWelcomeOnboardingView.swift */,
 				A6AD75082FFB20B800C2A92F /* AdminHomeView.swift */,
+				A9L600022012000200059F79 /* StudentsAdminView.swift */,
+				A9L700002013000100059F79 /* SuperAdminDashboardView.swift */,
+				A9L800002014000100059F79 /* TutorApplicationView.swift */,
 				A6AD750A2FFB215800C2A92F /* UploadLessonView.swift */,
+				A9LB00002016000100059F79 /* UploadLibraryBookView.swift */,
+				A9LB00022016000200059F79 /* LibraryBookReviewView.swift */,
 				A653EFF9300265CA00059F79 /* EmailVerificationView.swift */,
+				A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */,
 			);
 			path = Authentication;
 			sourceTree = "<group>";
@@ -378,13 +436,11 @@
 				A653EFF8300260DD00059F79 /* SavedItemsView.swift in Sources */,
 				A60945772FFA6512000482FF /* HomeView.swift in Sources */,
 				A6AD750B2FFB215800C2A92F /* UploadLessonView.swift in Sources */,
-				A65408332FF9BFB300FE3C33 /* Persistence.swift in Sources */,
 				A67115CE2FFA3FBF008822FE /* LoginView.swift in Sources */,
-				A60945842FFAF330000482FF /* PDFViewerScreen.swift  .swift in Sources */,
+				A60945842FFAF330000482FF /* PDFViewerScreen.swift in Sources */,
 				A653EFF230025F3A00059F79 /* StatsManager.swift in Sources */,
 				A653EFF03001FE9300059F79 /* PapersLibraryView.swift in Sources */,
 				A653EFF63002609300059F79 /* BrowseLevelsView.swift in Sources */,
-				A65408362FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodeld in Sources */,
 				A67115CA2FFA3F69008822FE /* Onboarding.swift in Sources */,
 				A67115CC2FFA3F91008822FE /* RegisterView.swift in Sources */,
 				A609457A2FFAEDF3000482FF /* CurriculumModels.swift in Sources */,
@@ -396,7 +452,7 @@
 				A60945732FFA6272000482FF /* User.swift in Sources */,
 				A60945752FFA6313000482FF /* AuthManger.swift in Sources */,
 				A653EFFA300265CA00059F79 /* EmailVerificationView.swift in Sources */,
-				A60945822FFAF2D8000482FF /* ContentHubView.swift .swift in Sources */,
+				A60945822FFAF2D8000482FF /* ContentHubView.swift in Sources */,
 				A653EFEC3001D6B000059F79 /* OptionalsListView.swift in Sources */,
 				A60945862FFAF396000482FF /* VideoPlayerScreen.swift in Sources */,
 				A6B1C0013003A00100059F79 /* MainTabView.swift in Sources */,
@@ -404,7 +460,25 @@
 				A6B1C0053003A00300059F79 /* BrowseView.swift in Sources */,
 				A7E10001200A000100059F79 /* EmailConfig.swift in Sources */,
 				A7E10003200A000200059F79 /* EmailService.swift in Sources */,
-				A7E10005200A000300059F79 /* SocialAuthService.swift in Sources */,
+				A8F10001200B000100059F79 /* SavedItemsManager.swift in Sources */,
+				A8F10003200B000200059F79 /* ContentLibrary.swift in Sources */,
+				A9C10001200C000100059F79 /* AppSettings.swift in Sources */,
+				A9C10003200C000200059F79 /* SettingsView.swift in Sources */,
+				A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */,
+				A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */,
+				A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */,
+				A9S30001200F000100059F79 /* ResetPasswordConfirmView.swift in Sources */,
+				A9L400012010000100059F79 /* LevelPickerComponents.swift in Sources */,
+				A9L500012011000100059F79 /* LibraryModels.swift in Sources */,
+				A9L500032011000200059F79 /* TriconAcademyLibraryView.swift in Sources */,
+				A9L600012012000100059F79 /* StudentWelcomeOnboardingView.swift in Sources */,
+				A9L600032012000200059F79 /* StudentsAdminView.swift in Sources */,
+				A9L700012013000100059F79 /* SuperAdminDashboardView.swift in Sources */,
+				A9L800012014000100059F79 /* TutorApplicationView.swift in Sources */,
+				A9L800032014000200059F79 /* AcademySupport.swift in Sources */,
+				A9L900012015000100059F79 /* LibraryBookStore.swift in Sources */,
+				A9LB00012016000100059F79 /* UploadLibraryBookView.swift in Sources */,
+				A9LB00032016000200059F79 /* LibraryBookReviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -567,6 +641,7 @@
 				DEVELOPMENT_TEAM = 3DT8ZB9MT7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Tricon Academy App/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -597,6 +672,7 @@
 				DEVELOPMENT_TEAM = 3DT8ZB9MT7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Tricon Academy App/Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -731,19 +807,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCVersionGroup section */
-		A65408342FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodeld */ = {
-			isa = XCVersionGroup;
-			children = (
-				A65408352FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodel */,
-			);
-			currentVersion = A65408352FF9BFB300FE3C33 /* Tricon_Academy_App.xcdatamodel */;
-			path = Tricon_Academy_App.xcdatamodeld;
-			sourceTree = "<group>";
-			versionGroupType = wrapper.xcdatamodel;
-		};
-/* End XCVersionGroup section */
 	};
 	rootObject = A654081E2FF9BFAF00FE3C33 /* Project object */;
 }

@@ -7,25 +7,25 @@ struct SubjectCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             ZStack {
-                Circle()
-                    .fill(subject.swiftUIColor.opacity(0.15))
-                    .frame(width: 50, height: 50)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(subject.swiftUIColor.opacity(0.14))
+                    .frame(width: 48, height: 48)
 
                 Image(systemName: subject.icon)
-                    .font(.system(size: 22))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(subject.swiftUIColor)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(subject.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(AppTheme.ink)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
 
                 Text("Papers · Notes · Videos")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundColor(AppTheme.muted)
             }
 
             Spacer(minLength: 0)
@@ -33,13 +33,20 @@ struct SubjectCardView: View {
             HStack {
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppTheme.muted.opacity(0.7))
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(18)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .stroke(subject.swiftUIColor.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
     }
 }

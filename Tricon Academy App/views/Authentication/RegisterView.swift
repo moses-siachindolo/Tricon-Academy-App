@@ -18,13 +18,30 @@ struct RegisterView: View {
 
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var isSocialLoading = false
+    @State private var appeared = false
 
-    private let brand = Color(red: 0.12, green: 0.62, blue: 0.36)
-    private let brandDeep = Color(red: 0.08, green: 0.42, blue: 0.26)
-    private let ink = Color(red: 0.09, green: 0.11, blue: 0.13)
-    private let muted = Color(red: 0.45, green: 0.48, blue: 0.52)
-    private let fieldFill = Color(red: 0.96, green: 0.965, blue: 0.972)
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case fullName, email, phone, password, confirmPassword
+    }
+
+    // MARK: - Professional palette
+    // Deep emerald + cool teal + soft champagne highlight for a premium, unique feel
+
+    private let brand = Color(red: 0.09, green: 0.62, blue: 0.45)
+    private let brandMid = Color(red: 0.07, green: 0.52, blue: 0.48)
+    private let brandDeep = Color(red: 0.05, green: 0.32, blue: 0.34)
+    private let brandGlow = Color(red: 0.18, green: 0.78, blue: 0.58)
+    private let brandSoft = Color(red: 0.90, green: 0.96, blue: 0.94)
+    private let champagne = Color(red: 0.94, green: 0.90, blue: 0.78)
+    private let canvasTop = Color(red: 0.955, green: 0.972, blue: 0.968)
+    private let canvasBottom = Color(red: 0.935, green: 0.955, blue: 0.960)
+    private let ink = Color(red: 0.07, green: 0.11, blue: 0.12)
+    private let muted = Color(red: 0.40, green: 0.46, blue: 0.45)
+    private let fieldFill = Color.white
+    private let cardFill = Color.white
+    private let danger = Color(red: 0.82, green: 0.22, blue: 0.22)
 
     private var canSubmit: Bool {
         !fullName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -34,391 +51,856 @@ struct RegisterView: View {
             && password == confirmPassword
             && agreeTerms
             && !isLoading
-            && !isSocialLoading
     }
 
     private var passwordStrength: PasswordStrength {
         PasswordStrength.evaluate(password)
     }
 
+    private var emailIsInvalid: Bool {
+        !email.isEmpty && !isValidEmail(email)
+    }
+
+    private var passwordsMismatch: Bool {
+        !confirmPassword.isEmpty && password != confirmPassword
+    }
+
+    /// Signature multi-stop brand gradient used across CTAs
+    private var brandGradient: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: brandGlow, location: 0),
+                .init(color: brand, location: 0.42),
+                .init(color: brandMid, location: 0.72),
+                .init(color: brandDeep, location: 1)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var brandGradientMuted: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: brand.opacity(0.42), location: 0),
+                .init(color: brandDeep.opacity(0.38), location: 1)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
     var body: some View {
         GeometryReader { geo in
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    header
-                        .padding(.top, 8)
-                        .padding(.bottom, 22)
+            ZStack {
+                // Layered canvas gradient
+                LinearGradient(
+                    colors: [canvasTop, canvasBottom],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-                    socialSection
-                        .padding(.bottom, 20)
+                ambientBackground(in: geo.size)
 
-                    divider
-                        .padding(.bottom, 18)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        header
+                            .padding(.top, 6)
+                            .padding(.bottom, 24)
 
-                    formSection
+                        formCard
+                            .padding(.bottom, 18)
 
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color(red: 0.75, green: 0.15, blue: 0.15))
-                            .multilineTextAlignment(.center)
-                            .padding(.top, 14)
-                            .frame(maxWidth: .infinity)
+                        actionFooter
+                            .padding(.bottom, 36)
                     }
-
-                    termsRow
-                        .padding(.top, 16)
-
-                    primaryButton
-                        .padding(.top, 18)
-
-                    NavigationLink(destination: LoginView()) {
-                        HStack(spacing: 4) {
-                            Text("Already have an account?")
-                                .foregroundColor(muted)
-                            Text("Log In")
-                                .fontWeight(.semibold)
-                                .foregroundColor(brand)
-                        }
-                        .font(.system(size: 14))
-                    }
-                    .padding(.top, 18)
-                    .padding(.bottom, 28)
+                    .padding(.horizontal, 20)
+                    .frame(minHeight: geo.size.height, alignment: .top)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 18)
                 }
-                .padding(.horizontal, 24)
-                .frame(minHeight: geo.size.height, alignment: .top)
             }
-            .background(Color(red: 0.985, green: 0.987, blue: 0.99).ignoresSafeArea())
         }
         .navigationTitle("Create Account")
         .navigationBarTitleDisplayMode(.inline)
-        .disabled(isLoading || isSocialLoading)
+        .disabled(isLoading)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5)) { appeared = true }
+        }
+    }
+
+    // MARK: - Ambient background
+
+    private func ambientBackground(in size: CGSize) -> some View {
+        ZStack {
+            // Soft diagonal wash
+            LinearGradient(
+                stops: [
+                    .init(color: brand.opacity(0.10), location: 0),
+                    .init(color: Color.clear, location: 0.45),
+                    .init(color: brandDeep.opacity(0.06), location: 1)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            // Top-left emerald orb
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [brandGlow.opacity(0.28), brand.opacity(0.08), .clear],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: size.width * 0.55
+                    )
+                )
+                .frame(width: size.width * 1.05, height: size.width * 0.85)
+                .offset(x: -size.width * 0.32, y: -size.height * 0.28)
+                .blur(radius: 8)
+                .allowsHitTesting(false)
+
+            // Bottom-right deep teal orb
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [brandDeep.opacity(0.16), brandMid.opacity(0.05), .clear],
+                        center: .center,
+                        startRadius: 4,
+                        endRadius: size.width * 0.5
+                    )
+                )
+                .frame(width: size.width * 0.95, height: size.width * 0.8)
+                .offset(x: size.width * 0.38, y: size.height * 0.42)
+                .blur(radius: 12)
+                .allowsHitTesting(false)
+
+            // Subtle champagne highlight (premium accent)
+            Circle()
+                .fill(champagne.opacity(0.18))
+                .frame(width: size.width * 0.4)
+                .blur(radius: 40)
+                .offset(x: size.width * 0.28, y: -size.height * 0.08)
+                .allowsHitTesting(false)
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                // Outer soft halo
+                Circle()
                     .fill(
-                        LinearGradient(
-                            colors: [brand, brandDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                        RadialGradient(
+                            colors: [brandSoft, brandSoft.opacity(0.4), .clear],
+                            center: .center,
+                            startRadius: 20,
+                            endRadius: 52
                         )
                     )
-                    .frame(width: 64, height: 64)
-                    .shadow(color: brand.opacity(0.3), radius: 14, x: 0, y: 8)
+                    .frame(width: 104, height: 104)
 
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(.white)
+                // Thin ring
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [brand.opacity(0.35), brandDeep.opacity(0.12), champagne.opacity(0.25)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 84, height: 84)
+
+                // Brand badge
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(brandGradient)
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.45), Color.white.opacity(0.05)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: brand.opacity(0.35), radius: 16, x: 0, y: 10)
+                    .shadow(color: brandDeep.opacity(0.18), radius: 4, x: 0, y: 2)
+
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 25, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .symbolRenderingMode(.hierarchical)
             }
 
-            Text("Join Tricon Academy")
-                .font(.system(size: 26, weight: .bold))
-                .foregroundColor(ink)
-
-            Text("Create a free student or tutor account to access past papers, notes, and video lessons.")
-                .font(.system(size: 14))
-                .foregroundColor(muted)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .padding(.horizontal, 8)
-        }
-    }
-
-    // MARK: - Social
-
-    private var socialSection: some View {
-        VStack(spacing: 12) {
-            // Sign in with Apple
-            Button {
-                Task { await handleApple() }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "apple.logo")
-                        .font(.system(size: 18, weight: .semibold))
-                    Text(isSocialLoading ? "Please wait…" : "Continue with Apple")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(AuthPressStyle())
-            .disabled(isSocialLoading || isLoading)
-
-            // Continue with Google
-            Button {
-                Task { await handleGoogle() }
-            } label: {
-                HStack(spacing: 10) {
-                    GoogleGlyph()
-                        .frame(width: 18, height: 18)
-                    Text("Continue with Google")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(ink)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.black.opacity(0.10), lineWidth: 1.2)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(AuthPressStyle())
-            .disabled(isSocialLoading || isLoading)
-        }
-    }
-
-    private var divider: some View {
-        HStack(spacing: 12) {
-            Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
-            Text("or sign up with email")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(muted)
-                .fixedSize()
-            Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
-        }
-    }
-
-    // MARK: - Form
-
-    private var formSection: some View {
-        VStack(spacing: 14) {
-            // Role
-            VStack(alignment: .leading, spacing: 8) {
-                Text("I am a…")
-                    .font(.system(size: 13, weight: .semibold))
+            VStack(spacing: 8) {
+                Text("Join Tricon Academy")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(ink)
+                    .tracking(-0.3)
 
-                HStack(spacing: 10) {
-                    ForEach(UserRole.registrableRoles) { role in
-                        roleChip(role)
+                Text("Free access to past papers, notes, and video lessons — for students and tutors.")
+                    .font(.system(size: 14.5, weight: .regular))
+                    .foregroundColor(muted)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 10)
+            }
+
+            // Trust chips — refined pills
+            HStack(spacing: 8) {
+                trustChip(icon: "checkmark.seal.fill", label: "Free forever")
+                trustChip(icon: "lock.shield.fill", label: "Secure")
+                trustChip(icon: "bolt.fill", label: "Instant access")
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    private func trustChip(icon: String, label: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            Text(label)
+                .font(.system(size: 11.5, weight: .semibold))
+        }
+        .foregroundColor(brandDeep)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.95), brandSoft.opacity(0.85)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+        )
+        .overlay(
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: [brand.opacity(0.22), brandDeep.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: brand.opacity(0.06), radius: 6, x: 0, y: 2)
+    }
+
+    // MARK: - Form card
+
+    private var formCard: some View {
+        VStack(spacing: 22) {
+            rolePicker
+
+            // Divider with label
+            sectionDivider(title: "Your details")
+
+            VStack(spacing: 14) {
+                labeledField(label: "Full name", icon: "person.fill", placeholder: "Your full name", text: $fullName, field: .fullName, contentType: .name)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    labeledField(label: "Email", icon: "envelope.fill", placeholder: "name@example.com", text: $email, field: .email, keyboard: .emailAddress, contentType: .emailAddress, autocap: .never)
+
+                    if emailIsInvalid {
+                        fieldError("Enter a valid email address.")
                     }
                 }
 
-                Text(selectedRole == .tutor
-                     ? "Tutors can upload lessons and use the full learning app."
-                     : "Students can browse, save, and study content.")
-                    .font(.system(size: 12))
-                    .foregroundColor(muted)
+                labeledField(label: "Phone", icon: "phone.fill", placeholder: "Phone number", text: $phone, field: .phone, keyboard: .phonePad, contentType: .telephoneNumber)
             }
 
-            authField(icon: "person.fill", placeholder: "Full name", text: $fullName, contentType: .name)
-            authField(icon: "envelope.fill", placeholder: "Email address", text: $email, keyboard: .emailAddress, contentType: .emailAddress)
-            authField(icon: "phone.fill", placeholder: "Phone number", text: $phone, keyboard: .phonePad, contentType: .telephoneNumber)
+            sectionDivider(title: "Security")
 
-            secureField(icon: "lock.fill", placeholder: "Password (min. 6 characters)", text: $password, isVisible: $showPassword)
+            VStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    labeledSecureField(label: "Password", icon: "lock.fill", placeholder: "Min. 6 characters", text: $password, field: .password, isVisible: $showPassword)
 
-            if !password.isEmpty {
-                passwordStrengthBar
+                    if !password.isEmpty {
+                        passwordStrengthBar
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    labeledSecureField(label: "Confirm password", icon: "lock.fill", placeholder: "Re-enter password", text: $confirmPassword, field: .confirmPassword, isVisible: $showConfirmPassword)
+
+                    if passwordsMismatch {
+                        fieldError("Passwords do not match.")
+                    }
+                }
             }
 
-            secureField(icon: "lock.fill", placeholder: "Confirm password", text: $confirmPassword, isVisible: $showConfirmPassword)
+            if let errorMessage {
+                errorBanner(errorMessage)
+            }
+
+            termsRow
+
+            // CTA stack
+            VStack(spacing: 12) {
+                primaryButton
+            }
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 22)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(cardFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white, brandSoft.opacity(0.25)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .opacity(0.5)
+                        .allowsHitTesting(false)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.95),
+                            brand.opacity(0.14),
+                            brandDeep.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.2
+                )
+        )
+        .shadow(color: brandDeep.opacity(0.07), radius: 32, x: 0, y: 16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 
-    private func roleChip(_ role: UserRole) -> some View {
-        let selected = selectedRole == role
-        return Button {
-            withAnimation(.easeInOut(duration: 0.18)) { selectedRole = role }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: role == .student ? "book.fill" : "checkmark.shield.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(role.displayName)
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .foregroundColor(selected ? .white : ink)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(roleChipBackground(selected: selected))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(selected ? Color.clear : Color.black.opacity(0.06), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
+    private func sectionDivider(title: String) -> some View {
+        HStack(spacing: 10) {
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(muted.opacity(0.85))
+                .tracking(0.8)
 
-    @ViewBuilder
-    private func roleChipBackground(selected: Bool) -> some View {
-        if selected {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [brand, brandDeep],
+                        colors: [brand.opacity(0.18), Color.clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
-        } else {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(fieldFill)
+                .frame(height: 1)
         }
+        .padding(.top, 2)
     }
 
-    private var passwordStrengthBar: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.black.opacity(0.06))
-                    Capsule()
-                        .fill(passwordStrength.color)
-                        .frame(width: geo.size.width * passwordStrength.progress)
-                        .animation(.easeInOut(duration: 0.2), value: passwordStrength)
+    // MARK: - Role picker (card layout)
+
+    private var rolePicker: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("I am a…")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(ink)
+                .padding(.leading, 2)
+
+            HStack(spacing: 12) {
+                ForEach(UserRole.registrableRoles) { role in
+                    roleCard(role)
                 }
             }
-            .frame(height: 5)
 
-            Text(passwordStrength.label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(passwordStrength.color)
+            Text(selectedRole == .tutor
+                 ? "Tutors can upload lessons and use the full learning app."
+                 : "Students can browse, save, and study content.")
+                .font(.system(size: 12.5))
+                .foregroundColor(muted)
+                .padding(.leading, 2)
+                .animation(.easeOut(duration: 0.2), value: selectedRole)
         }
-        .padding(.horizontal, 2)
     }
+
+    private func roleCard(_ role: UserRole) -> some View {
+        let selected = selectedRole == role
+        let icon = role == .student ? "book.fill" : "checkmark.shield.fill"
+        let subtitle = role == .student ? "Learn & revise" : "Teach & share"
+
+        return Button {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
+                selectedRole = role
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(selected ? Color.white.opacity(0.22) : brandSoft)
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(selected ? .white : brandDeep)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(role.displayName)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(selected ? .white : ink)
+
+                    Text(subtitle)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundColor(selected ? Color.white.opacity(0.82) : muted)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(brandGradient)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.4), Color.white.opacity(0.05)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                        .shadow(color: brand.opacity(0.32), radius: 14, x: 0, y: 6)
+                } else {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color(red: 0.965, green: 0.975, blue: 0.972))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(brand.opacity(0.10), lineWidth: 1)
+                        )
+                }
+            }
+        }
+        .buttonStyle(AuthPressStyle())
+        .accessibilityLabel("\(role.displayName), \(selected ? "selected" : "not selected")")
+    }
+
+    // MARK: - Terms
 
     private var termsRow: some View {
         Button {
-            agreeTerms.toggle()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                agreeTerms.toggle()
+            }
         } label: {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: agreeTerms ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 20))
-                    .foregroundColor(agreeTerms ? brand : muted)
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            agreeTerms
+                                ? brandGradient
+                                : LinearGradient(
+                                    colors: [Color(red: 0.95, green: 0.96, blue: 0.96), Color(red: 0.93, green: 0.94, blue: 0.94)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                        )
+                        .frame(width: 24, height: 24)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(
+                                    agreeTerms
+                                        ? Color.white.opacity(0.3)
+                                        : Color.black.opacity(0.10),
+                                    lineWidth: 1.2
+                                )
+                        )
+                        .shadow(color: agreeTerms ? brand.opacity(0.28) : .clear, radius: 6, x: 0, y: 3)
+
+                    if agreeTerms {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
 
                 Text("I agree to the Terms of Service and Privacy Policy for Tricon Academy.")
                     .font(.system(size: 13))
-                    .foregroundColor(ink.opacity(0.8))
+                    .foregroundColor(ink.opacity(0.78))
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 0)
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(agreeTerms ? brandSoft.opacity(0.55) : Color(red: 0.97, green: 0.975, blue: 0.975))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(agreeTerms ? brand.opacity(0.2) : Color.black.opacity(0.05), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(agreeTerms ? "Terms agreed" : "Agree to terms")
     }
 
+    // MARK: - Primary button
+
     private var primaryButton: some View {
         Button {
             Task { await handleRegister() }
         } label: {
-            Group {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    HStack(spacing: 8) {
-                        Text("Create Account")
-                            .fontWeight(.semibold)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .bold))
-                    }
+            ZStack {
+                // Soft glow plate when active
+                if canSubmit {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [brandGlow.opacity(0.45), brand.opacity(0.25)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .blur(radius: 14)
+                        .offset(y: 8)
+                        .frame(height: 54)
                 }
-            }
-            .font(.system(size: 16))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background(
-                LinearGradient(
-                    colors: canSubmit ? [brand, brandDeep] : [brand.opacity(0.45), brandDeep.opacity(0.45)],
-                    startPoint: .leading,
-                    endPoint: .trailing
+
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+
+                    Group {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            HStack(spacing: 10) {
+                                Text("Create Account")
+                                    .font(.system(size: 17, weight: .semibold))
+
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .padding(6)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(canSubmit ? 0.22 : 0.12))
+                                    )
+                            }
+                        }
+                    }
+                    .foregroundColor(.white)
+
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    Group {
+                        if canSubmit {
+                            brandGradient
+                        } else {
+                            brandGradientMuted
+                        }
+                    }
                 )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: canSubmit ? brand.opacity(0.28) : .clear, radius: 12, x: 0, y: 6)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    // Top edge light for depth
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(canSubmit ? 0.38 : 0.12),
+                                    Color.white.opacity(0.02)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1.2
+                        )
+                )
+                .shadow(color: canSubmit ? brand.opacity(0.34) : .clear, radius: 18, x: 0, y: 10)
+                .shadow(color: canSubmit ? brandDeep.opacity(0.18) : .clear, radius: 4, x: 0, y: 2)
+            }
         }
         .buttonStyle(AuthPressStyle())
         .disabled(!canSubmit)
+        .animation(.easeOut(duration: 0.22), value: canSubmit)
     }
 
-    // MARK: - Fields
+    // MARK: - Footer (secondary button layout)
 
-    private func authField(
-        icon: String,
-        placeholder: String,
-        text: Binding<String>,
-        keyboard: UIKeyboardType = .default,
-        contentType: UITextContentType? = nil
-    ) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(muted)
-                .frame(width: 20)
+    private var actionFooter: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(Color.black.opacity(0.06))
+                    .frame(height: 1)
+                Text("or")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(muted)
+                Rectangle()
+                    .fill(Color.black.opacity(0.06))
+                    .frame(height: 1)
+            }
+            .padding(.horizontal, 8)
 
-            TextField(placeholder, text: text)
-                .font(.system(size: 15))
-                .keyboardType(keyboard)
-                .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
-                .disableAutocorrection(true)
-                .textContentType(contentType)
+            NavigationLink(destination: LoginView()) {
+                HStack(spacing: 8) {
+                    Text("Already have an account?")
+                        .font(.system(size: 14))
+                        .foregroundColor(muted)
+                    Text("Log In")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(brandDeep)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(brand)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.white.opacity(0.72))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [brand.opacity(0.22), brandDeep.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.2
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
+            }
+            .buttonStyle(AuthPressStyle())
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 16)
+    }
+
+    // MARK: - Field helpers
+
+    private func fieldError(_ message: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 11))
+            Text(message)
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(danger)
+        .padding(.horizontal, 4)
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(danger)
+
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(danger)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(fieldFill)
+                .fill(danger.opacity(0.08))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(danger.opacity(0.18), lineWidth: 1)
         )
     }
 
-    private func secureField(
-        icon: String,
-        placeholder: String,
-        text: Binding<String>,
-        isVisible: Binding<Bool>
-    ) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(muted)
-                .frame(width: 20)
+    private var passwordStrengthBar: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.black.opacity(0.06))
 
-            Group {
-                if isVisible.wrappedValue {
-                    TextField(placeholder, text: text)
-                        .textInputAutocapitalization(.never)
-                        .disableAutocorrection(true)
-                } else {
-                    SecureField(placeholder, text: text)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [passwordStrength.color, passwordStrength.color.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(8, geo.size.width * passwordStrength.progress))
+                        .animation(.easeInOut(duration: 0.22), value: passwordStrength)
                 }
             }
-            .font(.system(size: 15))
-            .textContentType(.newPassword)
+            .frame(height: 5)
 
-            Button {
-                isVisible.wrappedValue.toggle()
-            } label: {
-                Image(systemName: isVisible.wrappedValue ? "eye.slash" : "eye")
-                    .font(.system(size: 14))
-                    .foregroundColor(muted)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(passwordStrength.color)
+                    .frame(width: 6, height: 6)
+                Text(passwordStrength.label)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundColor(passwordStrength.color)
             }
-            .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(fieldFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
-        )
+        .padding(.horizontal, 2)
+    }
+
+    private func labeledField(
+        label: String,
+        icon: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field,
+        keyboard: UIKeyboardType = .default,
+        contentType: UITextContentType? = nil,
+        autocap: TextInputAutocapitalization = .words
+    ) -> some View {
+        let isFocused = focusedField == field
+        return VStack(alignment: .leading, spacing: 7) {
+            Text(label)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(isFocused ? brandDeep : muted)
+                .padding(.leading, 2)
+                .animation(.easeOut(duration: 0.15), value: isFocused)
+
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(isFocused ? brand : muted.opacity(0.85))
+                    .frame(width: 20)
+
+                TextField(placeholder, text: text)
+                    .font(.system(size: 15.5))
+                    .foregroundColor(ink)
+                    .keyboardType(keyboard)
+                    .textInputAutocapitalization(autocap)
+                    .disableAutocorrection(true)
+                    .textContentType(contentType)
+                    .focused($focusedField, equals: field)
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 15)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isFocused ? brandSoft.opacity(0.5) : fieldFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isFocused
+                            ? LinearGradient(
+                                colors: [brand, brandMid],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                              )
+                            : LinearGradient(
+                                colors: [Color.black.opacity(0.07), Color.black.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                              ),
+                        lineWidth: isFocused ? 1.6 : 1
+                    )
+            )
+            .shadow(color: isFocused ? brand.opacity(0.14) : Color.black.opacity(0.02), radius: isFocused ? 12 : 2, x: 0, y: isFocused ? 5 : 1)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+    }
+
+    private func labeledSecureField(
+        label: String,
+        icon: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field,
+        isVisible: Binding<Bool>
+    ) -> some View {
+        let isFocused = focusedField == field
+        return VStack(alignment: .leading, spacing: 7) {
+            Text(label)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundColor(isFocused ? brandDeep : muted)
+                .padding(.leading, 2)
+                .animation(.easeOut(duration: 0.15), value: isFocused)
+
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(isFocused ? brand : muted.opacity(0.85))
+                    .frame(width: 20)
+
+                Group {
+                    if isVisible.wrappedValue {
+                        TextField(placeholder, text: text)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                    } else {
+                        SecureField(placeholder, text: text)
+                    }
+                }
+                .font(.system(size: 15.5))
+                .foregroundColor(ink)
+                .textContentType(.newPassword)
+                .focused($focusedField, equals: field)
+
+                Button {
+                    isVisible.wrappedValue.toggle()
+                } label: {
+                    Image(systemName: isVisible.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(muted)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle()
+                                .fill(Color.black.opacity(0.04))
+                        )
+                }
+                .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isFocused ? brandSoft.opacity(0.5) : fieldFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isFocused
+                            ? LinearGradient(
+                                colors: [brand, brandMid],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                              )
+                            : LinearGradient(
+                                colors: [Color.black.opacity(0.07), Color.black.opacity(0.05)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                              ),
+                        lineWidth: isFocused ? 1.6 : 1
+                    )
+            )
+            .shadow(color: isFocused ? brand.opacity(0.14) : Color.black.opacity(0.02), radius: isFocused ? 12 : 2, x: 0, y: isFocused ? 5 : 1)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
     }
 
     // MARK: - Actions
@@ -426,8 +908,6 @@ struct RegisterView: View {
     @MainActor
     private func handleRegister() async {
         errorMessage = nil
-        isLoading = true
-        defer { isLoading = false }
 
         guard !fullName.trimmingCharacters(in: .whitespaces).isEmpty else {
             errorMessage = "Please enter your full name."
@@ -454,8 +934,10 @@ struct RegisterView: View {
             return
         }
 
-        // Instant signup — account is created and the user is signed in right away.
-        let result = authManager.register(
+        isLoading = true
+        defer { isLoading = false }
+
+        let result = await authManager.register(
             fullName: fullName,
             email: email,
             phone: phone,
@@ -465,72 +947,17 @@ struct RegisterView: View {
 
         switch result {
         case .success:
-            // Root app observes isLoggedIn and shows MainTabView.
             break
         case .failure(let error):
             errorMessage = error.errorDescription
         }
     }
 
-    @MainActor
-    private func handleApple() async {
-        errorMessage = nil
-        isSocialLoading = true
-        defer { isSocialLoading = false }
-
-        guard let anchor = keyWindow() else {
-            errorMessage = "Unable to present Sign in with Apple."
-            return
-        }
-
-        do {
-            let profile = try await SocialAuthService.shared.signInWithApple(anchor: anchor)
-            authManager.completeSocialSignIn(profile: profile, preferredRole: selectedRole)
-        } catch let error as SocialAuthError {
-            if case .cancelled = error { return }
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    @MainActor
-    private func handleGoogle() async {
-        errorMessage = nil
-        isSocialLoading = true
-        defer { isSocialLoading = false }
-
-        guard EmailConfig.isGoogleConfigured else {
-            errorMessage = SocialAuthError.googleNotConfigured.errorDescription
-            return
-        }
-
-        guard let anchor = keyWindow() else {
-            errorMessage = "Unable to present Google sign-in."
-            return
-        }
-
-        do {
-            let profile = try await SocialAuthService.shared.signInWithGoogle(anchor: anchor)
-            authManager.completeSocialSignIn(profile: profile, preferredRole: selectedRole)
-        } catch let error as SocialAuthError {
-            if case .cancelled = error { return }
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func keyWindow() -> UIWindow? {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }
-    }
-
     private func isValidEmail(_ email: String) -> Bool {
-        let regex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-        return NSPredicate(format: "SELF MATCHES %@", regex).evaluate(with: email.trimmingCharacters(in: .whitespaces))
+        let trimmed = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.contains(" ") else { return false }
+        let regex = "^[A-Za-z0-9]+([._%+-][A-Za-z0-9]+)*@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\\.[A-Za-z]{2,}$"
+        return NSPredicate(format: "SELF MATCHES %@", regex).evaluate(with: trimmed)
     }
 }
 
@@ -561,8 +988,8 @@ private enum PasswordStrength: Equatable {
         switch self {
         case .weak: return Color(red: 0.85, green: 0.25, blue: 0.22)
         case .fair: return Color(red: 0.92, green: 0.62, blue: 0.12)
-        case .good: return Color(red: 0.25, green: 0.55, blue: 0.90)
-        case .strong: return Color(red: 0.12, green: 0.62, blue: 0.36)
+        case .good: return Color(red: 0.22, green: 0.52, blue: 0.88)
+        case .strong: return Color(red: 0.09, green: 0.62, blue: 0.45)
         }
     }
 
@@ -588,35 +1015,9 @@ private enum PasswordStrength: Equatable {
 struct AuthPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
-    }
-}
-
-struct GoogleGlyph: View {
-    var body: some View {
-        // Lightweight multicolor G approximation using SF Symbol + tint layers.
-        // For production branding you can replace with a Google "G" asset.
-        ZStack {
-            Circle()
-                .strokeBorder(
-                    AngularGradient(
-                        colors: [
-                            Color(red: 0.26, green: 0.52, blue: 0.96),
-                            Color(red: 0.22, green: 0.73, blue: 0.40),
-                            Color(red: 0.98, green: 0.74, blue: 0.02),
-                            Color(red: 0.92, green: 0.26, blue: 0.21),
-                            Color(red: 0.26, green: 0.52, blue: 0.96)
-                        ],
-                        center: .center
-                    ),
-                    lineWidth: 2.2
-                )
-            Text("G")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(Color(red: 0.26, green: 0.52, blue: 0.96))
-        }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.65), value: configuration.isPressed)
     }
 }
 

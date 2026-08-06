@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// Content management home for tutors and admins.
-/// Embedded as a tab in `MainTabView` so staff still have full app access
-/// (Home, Browse, Saved, Profile) plus upload tools.
 struct AdminHomeView: View {
     @EnvironmentObject var authManager: AuthManager
+    @ObservedObject private var library = ContentLibrary.shared
+    @ObservedObject private var bookStore = LibraryBookStore.shared
     @State private var showUploadSheet = false
+    @State private var showLibraryBookUpload = false
 
     private var roleTitle: String {
         authManager.currentUser?.roleDisplayName ?? "Staff"
@@ -15,125 +16,418 @@ struct AdminHomeView: View {
         authManager.currentUser?.fullName ?? roleTitle
     }
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+    private var myLibrarySubmissions: [UserLibraryBook] {
+        guard let id = authManager.currentUser?.id else { return [] }
+        return bookStore.books(uploadedBy: id)
+    }
 
-                // Header
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Welcome, \(welcomeName)")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(AppTheme.ink)
 
-                    Text("You’re signed in as \(roleTitle). Upload documents and lessons, and use every other tab like a student to review content.")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+                    Text(
+                        authManager.isCloudEnabled
+                            ? "You’re signed in as \(roleTitle). Uploads sync to Supabase so every student sees the same folders and files."
+                            : "You’re signed in as \(roleTitle). Upload papers, notes, and lessons into folders (local mode — configure SupabaseConfig to sync online)."
+                    )
+                        .font(.system(size: 14))
+                        .foregroundColor(AppTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 12)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.top, 10)
 
-                // Role badge
                 HStack(spacing: 10) {
                     Image(systemName: authManager.currentUser?.isAdmin == true ? "shield.fill" : "person.crop.circle.badge.checkmark")
-                        .foregroundColor(.green)
+                        .foregroundColor(AppTheme.brandDeep)
                     Text(roleTitle)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppTheme.ink)
                     Spacer()
-                    Text("Content access")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("\(library.items.count) uploads")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(AppTheme.brandDeep)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(AppTheme.brandSoft))
                 }
                 .padding(14)
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(14)
-                .padding(.horizontal, 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.brandSoft.opacity(0.7))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(AppTheme.brand.opacity(0.14), lineWidth: 1)
+                )
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
-                // Actions
+                // Specialist scope for tutors (admins manage everything).
+                if authManager.currentUser?.isTutor == true {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Your specialist subjects")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(AppTheme.ink)
+                        Text(authManager.currentUser?.managedSubjectsDisplay ?? "Not set")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(AppTheme.brandDeep)
+                        Text("You can upload and delete only for these subjects. You may still open and study every other course.")
+                            .font(.system(size: 12.5))
+                            .foregroundColor(AppTheme.muted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(AppTheme.card)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(AppTheme.brand.opacity(0.14), lineWidth: 1)
+                    )
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                }
+
                 VStack(spacing: 12) {
                     Button {
                         showUploadSheet = true
                     } label: {
                         Label("Upload Document or Lesson", systemImage: "arrow.up.doc.fill")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                            .font(.system(size: 15, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.green)
+                            .background(
+                                LinearGradient(
+                                    colors: [AppTheme.brand, AppTheme.brandDeep],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                             .foregroundColor(.white)
-                            .cornerRadius(14)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .shadow(color: AppTheme.brand.opacity(0.25), radius: 10, x: 0, y: 5)
                     }
+
+                    Button {
+                        showLibraryBookUpload = true
+                    } label: {
+                        Label(
+                            authManager.currentUser?.isAdmin == true
+                                ? "Upload library book"
+                                : "Submit library book for review",
+                            systemImage: "books.vertical.fill"
+                        )
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(AppTheme.card)
+                        .foregroundColor(AppTheme.ink)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(AppTheme.brand.opacity(0.18), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
 
                     NavigationLink(destination: BrowseView()) {
                         Label("Browse published content", systemImage: "square.grid.2x2.fill")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+                            .font(.system(size: 15, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color(.systemGray6))
-                            .foregroundColor(.primary)
-                            .cornerRadius(14)
+                            .background(AppTheme.card)
+                            .foregroundColor(AppTheme.ink)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                            )
                     }
                     .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 22)
 
-                // Tips
+                    if authManager.currentUser?.isAdmin == true {
+                        NavigationLink(destination: LibraryBookReviewView()) {
+                            HStack {
+                                Label("Review library books", systemImage: "checkmark.seal.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Spacer()
+                                if bookStore.pendingReviewCount > 0 {
+                                    Text("\(bookStore.pendingReviewCount)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().fill(AppTheme.danger))
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .padding(.horizontal, 16)
+                            .background(AppTheme.card)
+                            .foregroundColor(AppTheme.ink)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(AppTheme.brand.opacity(0.18), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        NavigationLink(destination: SuperAdminDashboardView()) {
+                            Label("Super Admin dashboard", systemImage: "shield.checkered")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(AppTheme.card)
+                                .foregroundColor(AppTheme.ink)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(AppTheme.brand.opacity(0.18), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Student personal data is super-admin only — tutors cannot access it.
+                    if authManager.currentUser?.isAdmin == true {
+                        NavigationLink(destination: StudentsAdminView()) {
+                            Label("Student accounts", systemImage: "person.3.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(AppTheme.card)
+                                .foregroundColor(AppTheme.ink)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, AppTheme.horizontalPadding)
+
+                // Tutor’s own library book submissions (pending / approved / rejected).
+                if authManager.currentUser?.isTutor == true, !myLibrarySubmissions.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Your library book submissions")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(AppTheme.ink)
+
+                        ForEach(myLibrarySubmissions.prefix(8)) { book in
+                            HStack(spacing: 12) {
+                                Image(systemName: "book.closed.fill")
+                                    .foregroundColor(AppTheme.brandDeep)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(book.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(AppTheme.ink)
+                                        .lineLimit(1)
+                                    Text("\(book.category.rawValue) · \(book.approvalStatus.rawValue.capitalized)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppTheme.muted)
+                                    if book.approvalStatus == .rejected,
+                                       let reason = book.reviewReason,
+                                       !reason.isEmpty {
+                                        Text("Reason: \(reason)")
+                                            .font(.system(size: 11.5))
+                                            .foregroundColor(AppTheme.danger)
+                                            .lineLimit(2)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(AppTheme.card)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(AppTheme.stroke, lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                }
+
+                if !library.items.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Recent uploads")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(AppTheme.ink)
+
+                        ForEach(library.items.prefix(8)) { item in
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(AppTheme.brandSoft)
+                                        .frame(width: 42, height: 42)
+                                    Image(systemName: recentItemIcon(item))
+                                        .foregroundColor(AppTheme.brandDeep)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(AppTheme.ink)
+                                        .lineLimit(1)
+                                    Text(recentItemSubtitle(item))
+                                        .font(.system(size: 12))
+                                        .foregroundColor(AppTheme.muted)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                if authManager.currentUser?.canManageSubject(item.subjectName) == true {
+                                    Button {
+                                        library.remove(id: item.id)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(AppTheme.danger)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Delete \(item.title)")
+                                }
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(AppTheme.card)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(AppTheme.stroke, lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, AppTheme.horizontalPadding)
+                }
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Staff tools")
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(AppTheme.ink)
 
                     staffTip(
+                        icon: "folder.badge.plus",
+                        title: "Folders & delete",
+                        detail: "Open a subject you manage → create year/topic folders, then use ··· or trash to delete a folder (keep files or remove everything) and individual uploads."
+                    )
+                    staffTip(
                         icon: "doc.badge.plus",
-                        title: "Documents",
-                        detail: "Upload PDFs, past papers, and study notes for any level and subject."
+                        title: "Papers & notes",
+                        detail: "Upload PDFs as past papers or study notes for Form 1–4 subjects."
                     )
                     staffTip(
                         icon: "video.badge.plus",
                         title: "Video lessons",
-                        detail: "Attach a video file with title, topic, and description."
+                        detail: "Attach a lesson with title, topic, and optional folder."
                     )
                     staffTip(
-                        icon: "person.2.fill",
+                        icon: "books.vertical.fill",
+                        title: "Library books",
+                        detail: authManager.currentUser?.isAdmin == true
+                            ? "Publish books to the Academy Library, or review tutor submissions before learners can see them."
+                            : "Submit library books for admin verification. You cannot publish books until an admin approves them."
+                    )
+                    if authManager.currentUser?.isAdmin == true {
+                        staffTip(
+                            icon: "shield.checkered",
+                            title: "Super Admin",
+                            detail: "View all pupils and tutors, block or remove accounts, and revoke tutor access."
+                        )
+                    }
+                    if authManager.currentUser?.isAdmin == true {
+                        staffTip(
+                            icon: "person.2.fill",
+                            title: "Student accounts",
+                            detail: "Only super admins can view learner school, district, and grade details."
+                        )
+                    } else {
+                        staffTip(
+                            icon: "lock.shield.fill",
+                            title: "Privacy",
+                            detail: "Tutors cannot view student personal information. Upload only your specialist subject unless super admin grants more."
+                        )
+                    }
+                    staffTip(
+                        icon: "eye.fill",
                         title: "Student experience",
-                        detail: "Use Home, Browse, and Saved tabs to see content the way learners do."
+                        detail: "Use Home, Browse, and Saved to review content as learners do."
                     )
                 }
-                .padding(.horizontal, 22)
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
                 Spacer(minLength: 24)
             }
         }
+        .background(AppTheme.canvas.ignoresSafeArea())
         .navigationTitle("Manage")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            bookStore.refreshInBackground()
+        }
         .sheet(isPresented: $showUploadSheet) {
             UploadLessonView()
                 .environmentObject(authManager)
         }
+        .sheet(isPresented: $showLibraryBookUpload) {
+            UploadLibraryBookView()
+                .environmentObject(authManager)
+        }
     }
 
-    @ViewBuilder
+    private func recentItemIcon(_ item: LibraryItem) -> String {
+        switch item.kind {
+        case .video: return "play.rectangle.fill"
+        case .note: return "note.text"
+        case .paper, .document: return "doc.fill"
+        }
+    }
+
+    private func recentItemSubtitle(_ item: LibraryItem) -> String {
+        var parts = ["\(item.subjectName)", item.level.rawValue, item.section.displayName]
+        if let folderId = item.folderId,
+           let folder = library.folders.first(where: { $0.id == folderId }) {
+            parts.append(folder.name)
+        }
+        return parts.joined(separator: " · ")
+    }
+
     private func staffTip(icon: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(.green)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(AppTheme.brand)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppTheme.ink)
                 Text(detail)
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(AppTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Color(.systemGray6))
-        .cornerRadius(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
     }
 }
 

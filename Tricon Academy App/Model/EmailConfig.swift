@@ -1,6 +1,6 @@
 import Foundation
 
-/// Configuration for outbound verification emails and social OAuth.
+/// Configuration for outbound verification emails.
 ///
 /// ## Real email (pick one)
 ///
@@ -45,13 +45,6 @@ enum EmailConfig {
     static let appName = "Tricon Academy"
     static let supportEmail = "support@triconacademy.com"
 
-    // MARK: - Social sign-in
-
-    /// Google OAuth iOS client ID from Google Cloud Console
-    /// (APIs & Services → Credentials → OAuth 2.0 Client IDs → iOS).
-    /// Leave as placeholder to keep the Google button visible but disabled until set.
-    static let googleClientID = "YOUR_GOOGLE_IOS_CLIENT_ID.apps.googleusercontent.com"
-
     // MARK: - Helpers
 
     static var isEmailConfigured: Bool {
@@ -63,19 +56,5 @@ enum EmailConfig {
         case .resend:
             return !resendAPIKey.hasPrefix("re_YOUR_") && !resendAPIKey.isEmpty
         }
-    }
-
-    static var isGoogleConfigured: Bool {
-        !googleClientID.hasPrefix("YOUR_") && googleClientID.contains(".apps.googleusercontent.com")
-    }
-
-    /// URL scheme used by Google OAuth redirect, derived from the reversed client id.
-    static var googleURLScheme: String? {
-        guard isGoogleConfigured else { return nil }
-        let parts = googleClientID.split(separator: ".")
-        guard parts.count >= 2 else { return nil }
-        // client id: 123-abc.apps.googleusercontent.com → scheme: com.googleusercontent.apps.123-abc
-        let idPart = parts[0]
-        return "com.googleusercontent.apps.\(idPart)"
     }
 }

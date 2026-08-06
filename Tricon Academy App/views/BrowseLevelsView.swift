@@ -9,46 +9,34 @@ struct BrowseLevelsView: View {
     let subtitle: String
     let targetTab: Int
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundColor(.gray)
-                }
-                .padding(.horizontal, 22)
+                LevelPickerHeader(title: title, subtitle: subtitle)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
 
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(Level.allCases) { level in
-                        NavigationLink(destination: SubjectListView(level: level, initialTab: targetTab)) {
-                            VStack(spacing: 10) {
-                                Image(systemName: level.icon)
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.green)
-                                Text(level.rawValue)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 100)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                        }
-                    }
+                LevelPickerGrid(
+                    subtitle: { _ in contentLabel }
+                ) { level in
+                    SubjectListView(level: level, initialTab: targetTab)
                 }
-                .padding(.horizontal, 22)
+                .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.top, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
+        .background(AppTheme.canvas.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var contentLabel: String {
+        switch targetTab {
+        case 0: return "Past papers"
+        case 1: return "Study notes"
+        case 2: return "Video lessons"
+        default: return "Browse content"
+        }
     }
 }
 

@@ -12,197 +12,41 @@ struct LoginView: View {
 
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var isSocialLoading = false
-    @State private var showComingSoon = false
-    @State private var comingSoonMessage = ""
+    @State private var showResetSheet = false
+    @State private var resetEmail = ""
+    @State private var resetPassword = ""
+    @State private var resetConfirm = ""
+    @State private var resetMessage: String?
+    @State private var resetSucceeded = false
+    @State private var appeared = false
+
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case email, password
+    }
 
     private let brand = Color(red: 0.12, green: 0.62, blue: 0.36)
     private let brandDeep = Color(red: 0.08, green: 0.42, blue: 0.26)
     private let ink = Color(red: 0.09, green: 0.11, blue: 0.13)
     private let muted = Color(red: 0.45, green: 0.48, blue: 0.52)
-    private let fieldFill = Color(red: 0.96, green: 0.965, blue: 0.972)
+    private let fieldFill = Color(red: 0.965, green: 0.968, blue: 0.975)
+    private let cardFill = Color.white
 
     private var canSubmit: Bool {
-        !email.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty && !isLoading && !isSocialLoading
+        !email.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty && !isLoading
     }
 
     var body: some View {
         GeometryReader { geo in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Header
-                    VStack(spacing: 10) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [brand, brandDeep],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 64, height: 64)
-                                .shadow(color: brand.opacity(0.3), radius: 14, x: 0, y: 8)
+                    header
+                        .padding(.top, 8)
+                        .padding(.bottom, 26)
 
-                            Image(systemName: "graduationcap.fill")
-                                .font(.system(size: 28, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-
-                        Text("Welcome back")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(ink)
-
-                        Text("Log in as a student, tutor, or admin to continue learning.")
-                            .font(.system(size: 14))
-                            .foregroundColor(muted)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 8)
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 22)
-
-                    // Social
-                    VStack(spacing: 12) {
-                        Button {
-                            Task { await handleApple() }
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 18, weight: .semibold))
-                                Text("Continue with Apple")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.black)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(AuthPressStyle())
-                        .disabled(isSocialLoading || isLoading)
-
-                        Button {
-                            Task { await handleGoogle() }
-                        } label: {
-                            HStack(spacing: 10) {
-                                GoogleGlyph()
-                                    .frame(width: 18, height: 18)
-                                Text("Continue with Google")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(ink)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.black.opacity(0.10), lineWidth: 1.2)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(AuthPressStyle())
-                        .disabled(isSocialLoading || isLoading)
-                    }
-                    .padding(.bottom, 20)
-
-                    // Divider
-                    HStack(spacing: 12) {
-                        Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
-                        Text("or log in with email")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(muted)
-                            .fixedSize()
-                        Rectangle().fill(Color.black.opacity(0.08)).frame(height: 1)
-                    }
-                    .padding(.bottom, 18)
-
-                    // Demo hint
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Demo accounts")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(muted)
-                        Text("Admin · admin@tricon.com  ·  Tutor · tutor@tricon.com  ·  Student · any email")
-                            .font(.system(size: 11))
-                            .foregroundColor(muted.opacity(0.9))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(fieldFill)
-                    )
-                    .padding(.bottom, 14)
-
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color(red: 0.75, green: 0.15, blue: 0.15))
-                            .multilineTextAlignment(.center)
-                            .padding(.bottom, 10)
-                    }
-
-                    VStack(spacing: 12) {
-                        iconField(icon: "envelope.fill", placeholder: "Email address", text: $email, keyboard: .emailAddress)
-                        iconSecureField(icon: "lock.fill", placeholder: "Password", text: $password, isVisible: $showPassword)
-                    }
-
-                    HStack {
-                        Button {
-                            rememberMe.toggle()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: rememberMe ? "checkmark.square.fill" : "square")
-                                    .foregroundColor(rememberMe ? brand : muted)
-                                Text("Remember me")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(ink)
-                            }
-                        }
-                        .buttonStyle(.plain)
-
-                        Spacer()
-
-                        Button {
-                            comingSoonMessage = "Password reset isn’t available yet. Use your existing account credentials for now."
-                            showComingSoon = true
-                        } label: {
-                            Text("Forgot password?")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(brand)
-                        }
-                    }
-                    .padding(.top, 12)
-
-                    Button {
-                        handleLogin()
-                    } label: {
-                        Group {
-                            if isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Text("Log In")
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(
-                            LinearGradient(
-                                colors: canSubmit ? [brand, brandDeep] : [brand.opacity(0.45), brandDeep.opacity(0.45)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .shadow(color: canSubmit ? brand.opacity(0.28) : .clear, radius: 12, x: 0, y: 6)
-                    }
-                    .buttonStyle(AuthPressStyle())
-                    .disabled(!canSubmit)
-                    .padding(.top, 18)
+                    card
+                        .padding(.bottom, 22)
 
                     NavigationLink(destination: RegisterView()) {
                         HStack(spacing: 4) {
@@ -214,21 +58,246 @@ struct LoginView: View {
                         }
                         .font(.system(size: 14))
                     }
-                    .padding(.top, 18)
                     .padding(.bottom, 28)
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 22)
                 .frame(minHeight: geo.size.height, alignment: .top)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 14)
             }
-            .background(Color(red: 0.985, green: 0.987, blue: 0.99).ignoresSafeArea())
+            .background(Color(red: 0.976, green: 0.980, blue: 0.985).ignoresSafeArea())
         }
         .navigationTitle("Log In")
         .navigationBarTitleDisplayMode(.inline)
-        .disabled(isLoading || isSocialLoading)
-        .alert("Coming soon", isPresented: $showComingSoon) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(comingSoonMessage)
+        .disabled(isLoading)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.4)) { appeared = true }
+        }
+        .sheet(isPresented: $showResetSheet) {
+            resetPasswordSheet
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [brand, brandDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 68, height: 68)
+                    .shadow(color: brand.opacity(0.32), radius: 16, x: 0, y: 10)
+
+                Image(systemName: "graduationcap.fill")
+                    .font(.system(size: 29, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+
+            Text("Welcome back")
+                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .foregroundColor(ink)
+
+            Text("Log in as a student, tutor, or admin to continue learning.")
+                .font(.system(size: 14))
+                .foregroundColor(muted)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .padding(.horizontal, 10)
+        }
+    }
+
+    // MARK: - Card
+
+    private var card: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 14) {
+                authField(icon: "envelope.fill", placeholder: "Email address", text: $email, field: .email, keyboard: .emailAddress)
+                secureField(icon: "lock.fill", placeholder: "Password", text: $password, field: .password, isVisible: $showPassword)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color(red: 0.75, green: 0.15, blue: 0.15))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+
+            HStack {
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { rememberMe.toggle() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: rememberMe ? "checkmark.square.fill" : "square")
+                            .foregroundColor(rememberMe ? brand : muted)
+                        Text("Remember me")
+                            .font(.system(size: 13))
+                            .foregroundColor(ink)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button {
+                    resetEmail = email
+                    resetPassword = ""
+                    resetConfirm = ""
+                    resetMessage = nil
+                    resetSucceeded = false
+                    showResetSheet = true
+                } label: {
+                    Text("Forgot password?")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(brand)
+                }
+            }
+
+            primaryButton
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(cardFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 24, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+    }
+
+    private var primaryButton: some View {
+        Button {
+            handleLogin()
+        } label: {
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Log In")
+                        .fontWeight(.semibold)
+                }
+            }
+            .font(.system(size: 17))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                LinearGradient(
+                    colors: canSubmit ? [brand, brandDeep] : [brand.opacity(0.45), brandDeep.opacity(0.45)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: canSubmit ? brand.opacity(0.30) : .clear, radius: 16, x: 0, y: 8)
+        }
+        .buttonStyle(AuthPressStyle())
+        .disabled(!canSubmit)
+    }
+
+    // MARK: - Password reset
+
+    private var resetPasswordSheet: some View {
+        NavigationView {
+            Form {
+                Section {
+                    Text(
+                        authManager.isCloudEnabled
+                            ? "Enter your account email. We’ll email a reset link that opens Tricon Academy so you can set a new password (not a blank localhost page)."
+                            : "Enter the email for your account on this device and choose a new password (min. 6 characters)."
+                    )
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+
+                Section("Account") {
+                    TextField("Email", text: $resetEmail)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .disableAutocorrection(true)
+                    if !authManager.isCloudEnabled {
+                        SecureField("New password", text: $resetPassword)
+                        SecureField("Confirm password", text: $resetConfirm)
+                    }
+                }
+
+                if let resetMessage {
+                    Section {
+                        Text(resetMessage)
+                            .font(.footnote)
+                            .foregroundColor(resetSucceeded ? .green : .red)
+                    }
+                }
+
+                Section {
+                    Button(authManager.isCloudEnabled ? "Send reset email" : "Reset password") {
+                        handleResetPassword()
+                    }
+                    .disabled(
+                        resetEmail.trimmingCharacters(in: .whitespaces).isEmpty
+                            || (!authManager.isCloudEnabled
+                                && (resetPassword.count < 6 || resetPassword != resetConfirm))
+                    )
+                }
+            }
+            .navigationTitle("Reset password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { showResetSheet = false }
+                }
+            }
+        }
+    }
+
+    private func handleResetPassword() {
+        if authManager.isCloudEnabled {
+            // Cloud: email recovery only (no local password rewrite).
+            Task {
+                let result = await authManager.resetPassword(email: resetEmail, newPassword: resetPassword)
+                await MainActor.run {
+                    switch result {
+                    case .success:
+                        resetSucceeded = true
+                        resetMessage = "Check your email. Open the link on this iPhone — it will return you to Tricon Academy to set a new password."
+                    case .failure(let error):
+                        resetSucceeded = false
+                        resetMessage = error.errorDescription
+                    }
+                }
+            }
+            return
+        }
+
+        guard resetPassword == resetConfirm else {
+            resetSucceeded = false
+            resetMessage = "Passwords do not match."
+            return
+        }
+        Task {
+            let result = await authManager.resetPassword(email: resetEmail, newPassword: resetPassword)
+            await MainActor.run {
+                switch result {
+                case .success:
+                    resetSucceeded = true
+                    resetMessage = "Password updated. You can log in with your new password."
+                    email = resetEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    password = resetPassword
+                case .failure(let error):
+                    resetSucceeded = false
+                    resetMessage = error.errorDescription
+                }
+            }
         }
     }
 
@@ -238,83 +307,34 @@ struct LoginView: View {
         errorMessage = nil
         isLoading = true
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            let result = authManager.login(email: email, password: password, remember: rememberMe)
-            isLoading = false
-
-            switch result {
-            case .success:
-                break
-            case .failure(let error):
-                errorMessage = error.errorDescription
+        Task {
+            let result = await authManager.login(email: email, password: password, remember: rememberMe)
+            await MainActor.run {
+                isLoading = false
+                switch result {
+                case .success:
+                    break
+                case .failure(let error):
+                    errorMessage = error.errorDescription
+                }
             }
         }
     }
 
-    @MainActor
-    private func handleApple() async {
-        errorMessage = nil
-        isSocialLoading = true
-        defer { isSocialLoading = false }
-
-        guard let anchor = keyWindow() else {
-            errorMessage = "Unable to present Sign in with Apple."
-            return
-        }
-
-        do {
-            let profile = try await SocialAuthService.shared.signInWithApple(anchor: anchor)
-            authManager.completeSocialSignIn(profile: profile)
-        } catch let error as SocialAuthError {
-            if case .cancelled = error { return }
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    @MainActor
-    private func handleGoogle() async {
-        errorMessage = nil
-        isSocialLoading = true
-        defer { isSocialLoading = false }
-
-        guard EmailConfig.isGoogleConfigured else {
-            errorMessage = SocialAuthError.googleNotConfigured.errorDescription
-            return
-        }
-
-        guard let anchor = keyWindow() else {
-            errorMessage = "Unable to present Google sign-in."
-            return
-        }
-
-        do {
-            let profile = try await SocialAuthService.shared.signInWithGoogle(anchor: anchor)
-            authManager.completeSocialSignIn(profile: profile)
-        } catch let error as SocialAuthError {
-            if case .cancelled = error { return }
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func keyWindow() -> UIWindow? {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }
-    }
-
     // MARK: - Fields
 
-    @ViewBuilder
-    private func iconField(icon: String, placeholder: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
-        HStack(spacing: 12) {
+    private func authField(
+        icon: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field,
+        keyboard: UIKeyboardType = .default
+    ) -> some View {
+        let isFocused = focusedField == field
+        return HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(muted)
+                .foregroundColor(isFocused ? brand : muted)
                 .frame(width: 20)
             TextField(placeholder, text: text)
                 .font(.system(size: 15))
@@ -322,34 +342,45 @@ struct LoginView: View {
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
                 .textContentType(.emailAddress)
+                .focused($focusedField, equals: field)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 16)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(fieldFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isFocused ? brand.opacity(0.55) : Color.black.opacity(0.05), lineWidth: isFocused ? 1.6 : 1)
         )
+        .shadow(color: isFocused ? brand.opacity(0.12) : .clear, radius: 10, x: 0, y: 4)
+        .animation(.easeOut(duration: 0.18), value: isFocused)
     }
 
-    @ViewBuilder
-    private func iconSecureField(icon: String, placeholder: String, text: Binding<String>, isVisible: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
+    private func secureField(
+        icon: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field,
+        isVisible: Binding<Bool>
+    ) -> some View {
+        let isFocused = focusedField == field
+        return HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(muted)
+                .foregroundColor(isFocused ? brand : muted)
                 .frame(width: 20)
             if isVisible.wrappedValue {
                 TextField(placeholder, text: text)
                     .font(.system(size: 15))
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
+                    .focused($focusedField, equals: field)
             } else {
                 SecureField(placeholder, text: text)
                     .font(.system(size: 15))
+                    .focused($focusedField, equals: field)
             }
             Button {
                 isVisible.wrappedValue.toggle()
@@ -360,16 +391,18 @@ struct LoginView: View {
             }
             .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 16)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(fieldFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isFocused ? brand.opacity(0.55) : Color.black.opacity(0.05), lineWidth: isFocused ? 1.6 : 1)
         )
+        .shadow(color: isFocused ? brand.opacity(0.12) : .clear, radius: 10, x: 0, y: 4)
+        .animation(.easeOut(duration: 0.18), value: isFocused)
     }
 }
 

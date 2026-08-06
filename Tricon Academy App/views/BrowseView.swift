@@ -3,49 +3,24 @@ import SwiftUI
 /// Primary Browse tab: pick a level, then a subject, then content.
 struct BrowseView: View {
 
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Browse curriculum")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    Text("Choose your level, then pick a subject for papers, notes and videos.")
-                        .font(.footnote)
-                        .foregroundColor(.gray)
-                }
-                .padding(.horizontal, 22)
+                LevelPickerHeader(
+                    title: "Browse curriculum",
+                    subtitle: "Choose your form (Form 1–4), then open a subject for papers, notes, and videos."
+                )
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(Level.allCases) { level in
-                        NavigationLink(destination: SubjectListView(level: level)) {
-                            VStack(spacing: 10) {
-                                Image(systemName: level.icon)
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.green)
-                                Text(level.rawValue)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                                Text("\(allSubjects.count) subjects")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 110)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                LevelPickerGrid { level in
+                    SubjectListView(level: level)
                 }
-                .padding(.horizontal, 22)
+                .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
+        .background(AppTheme.canvas.ignoresSafeArea())
         .navigationTitle("Browse")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -55,40 +30,28 @@ struct BrowseView: View {
 struct SubjectLevelPickerView: View {
 
     let subject: Subject
-    let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Which level for \(subject.name)?")
-                    .font(.footnote)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 22)
+                LevelPickerHeader(
+                    title: "Choose a level",
+                    subtitle: "Which form for \(subject.name)? Choose Form 1–4."
+                )
+                .padding(.horizontal, AppTheme.horizontalPadding)
 
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(Level.allCases) { level in
-                        NavigationLink(destination: destination(for: level)) {
-                            VStack(spacing: 10) {
-                                Image(systemName: level.icon)
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.green)
-                                Text(level.rawValue)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 100)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                LevelPickerGrid(
+                    subtitle: { _ in "Open \(subject.name)" },
+                    accent: { _ in subject.swiftUIColor }
+                ) { level in
+                    destination(for: level)
                 }
-                .padding(.horizontal, 22)
+                .padding(.horizontal, AppTheme.horizontalPadding)
             }
-            .padding(.top, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
         }
+        .background(AppTheme.canvas.ignoresSafeArea())
         .navigationTitle(subject.name)
         .navigationBarTitleDisplayMode(.inline)
     }
