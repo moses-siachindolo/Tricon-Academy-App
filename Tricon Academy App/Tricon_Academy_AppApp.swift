@@ -34,6 +34,12 @@ struct Tricon_Academy_App: App {
             .environmentObject(authManager)
             .environmentObject(appSettings)
             .preferredColorScheme(appSettings.preferredColorScheme)
+            .onAppear {
+                AppChrome.apply(for: appSettings.preferredColorScheme)
+            }
+            .onChange(of: appSettings.useDarkTheme) { _ in
+                AppChrome.apply(for: appSettings.preferredColorScheme)
+            }
             .onOpenURL { url in
                 authManager.handleOpenURL(url)
             }

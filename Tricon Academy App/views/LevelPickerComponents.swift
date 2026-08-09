@@ -67,7 +67,7 @@ struct LevelTile: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
     }
 
     // MARK: Row
@@ -76,7 +76,7 @@ struct LevelTile: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(color.opacity(0.12))
+                    .fill(color.opacity(0.14))
                     .frame(width: 48, height: 48)
 
                 Text(level.shortLabel)
@@ -98,7 +98,7 @@ struct LevelTile: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.muted.opacity(0.65))
+                .foregroundColor(AppTheme.subtle)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -110,7 +110,7 @@ struct LevelTile: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
+        .shadow(color: AppTheme.shadow, radius: 6, x: 0, y: 2)
     }
 
     private var resolvedSubtitle: String {

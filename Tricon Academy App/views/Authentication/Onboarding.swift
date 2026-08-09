@@ -9,12 +9,13 @@ struct OnboardingView: View {
     @State private var page = 0
     @State private var appear = false
 
-    private let brand = Color(red: 0.12, green: 0.62, blue: 0.36)
-    private let brandDeep = Color(red: 0.08, green: 0.42, blue: 0.26)
-    private let ink = Color(red: 0.09, green: 0.11, blue: 0.13)
-    private let muted = Color(red: 0.45, green: 0.48, blue: 0.52)
-    private let canvas = Color(red: 0.975, green: 0.978, blue: 0.982)
-    private let softDot = Color(red: 0.84, green: 0.86, blue: 0.88)
+    private let brand = AppTheme.brand
+    /// Deep green for CTA gradients under white text.
+    private let brandDeep = Color(red: 0.04, green: 0.36, blue: 0.26)
+    private let ink = AppTheme.ink
+    private let muted = AppTheme.muted
+    private let canvas = AppTheme.canvas
+    private let softDot = AppTheme.fill
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -40,14 +41,6 @@ struct OnboardingView: View {
             accent: Color(red: 0.55, green: 0.28, blue: 0.78),
             accentSoft: Color(red: 0.95, green: 0.91, blue: 0.98),
             illustration: .lessons
-        ),
-        OnboardingPage(
-            badge: "YOUR PROGRESS",
-            title: "Stay focused\nand organised",
-            subtitle: "Save what matters, track your study rhythm, and keep every subject within reach when you need it.",
-            accent: Color(red: 0.90, green: 0.48, blue: 0.12),
-            accentSoft: Color(red: 0.99, green: 0.94, blue: 0.88),
-            illustration: .progress
         )
     ]
 
@@ -154,16 +147,16 @@ struct OnboardingView: View {
                             NavigationLink(destination: LoginView()) {
                                 Text("I already have an account")
                                     .font(.system(size: 15.5, weight: .semibold))
-                                    .foregroundColor(ink.opacity(0.72))
+                                    .foregroundColor(ink)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 50)
                                     .background(
                                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(Color.black.opacity(0.08), lineWidth: 1.2)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                    .fill(Color.white)
-                                            )
+                                            .fill(AppTheme.card)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(AppTheme.strokeStrong, lineWidth: 1.2)
                                     )
                             }
                             .buttonStyle(OnboardingPressStyle())
@@ -551,7 +544,7 @@ private struct ProgressIllustration: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("This week")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(red: 0.25, green: 0.27, blue: 0.3))
+                    .foregroundColor(AppTheme.ink)
 
                 HStack(alignment: .bottom, spacing: 10) {
                     ForEach(weekDays.indices, id: \.self) { index in
@@ -567,7 +560,7 @@ private struct ProgressIllustration: View {
                                 .frame(width: 16, height: 54 * weekHeights[index])
                             Text(weekDays[index])
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(Color.black.opacity(0.4))
+                                .foregroundColor(AppTheme.muted)
                         }
                     }
                 
@@ -577,7 +570,7 @@ private struct ProgressIllustration: View {
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white)
+                    .fill(AppTheme.card)
                     .shadow(color: accent.opacity(0.14), radius: 12, x: 0, y: 6)
             )
             .frame(width: 230)
@@ -591,16 +584,16 @@ private struct ProgressIllustration: View {
                 .foregroundColor(accent)
             Text(value)
                 .font(.system(size: 22, weight: .bold))
-                .foregroundColor(Color(red: 0.12, green: 0.14, blue: 0.16))
+                .foregroundColor(AppTheme.ink)
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.black.opacity(0.45))
+                .foregroundColor(AppTheme.muted)
         }
         .padding(14)
         .frame(width: 108, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
+                .fill(AppTheme.card)
                 .shadow(color: accent.opacity(0.14), radius: 12, x: 0, y: 6)
         )
     }

@@ -17,10 +17,10 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 20) {
+            VStack(spacing: 14) {
 
-                // MARK: Identity
-                VStack(spacing: 12) {
+                // MARK: Compact identity
+                HStack(spacing: 14) {
                     ZStack {
                         Circle()
                             .fill(
@@ -30,56 +30,67 @@ struct ProfileView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 88, height: 88)
-                            .shadow(color: AppTheme.brand.opacity(0.30), radius: 14, x: 0, y: 8)
+                            .frame(width: 56, height: 56)
+                            .shadow(color: AppTheme.brand.opacity(0.22), radius: 8, x: 0, y: 4)
                         Text(initials)
-                            .font(.system(size: 30, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                     }
                     .accessibilityHidden(true)
 
-                    Text(authManager.currentUser?.fullName ?? "Student")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.ink)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(authManager.currentUser?.fullName ?? "Student")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(AppTheme.ink)
+                            .lineLimit(1)
 
-                    Text(authManager.currentUser?.email ?? "")
-                        .font(.system(size: 14))
-                        .foregroundColor(AppTheme.muted)
+                        Text(authManager.currentUser?.email ?? "")
+                            .font(.system(size: 13))
+                            .foregroundColor(AppTheme.muted)
+                            .lineLimit(1)
 
-                    Text(accountTypeLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(canManageContent ? AppTheme.brandSoft : AppTheme.stroke)
-                        .foregroundColor(canManageContent ? AppTheme.brandDeep : AppTheme.muted)
-                        .clipShape(Capsule())
+                        Text(accountTypeLabel)
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(canManageContent ? AppTheme.brandSoft : AppTheme.stroke)
+                            .foregroundColor(canManageContent ? AppTheme.brandDeep : AppTheme.muted)
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 20)
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.top, 8)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(authManager.currentUser?.fullName ?? "Student"), \(accountTypeLabel), \(authManager.currentUser?.email ?? "")")
 
-                // MARK: Tutor specialist scope
+                // MARK: Tutor specialist scope (admin-locked)
                 if authManager.currentUser?.isTutor == true {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Your specialist subjects")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(AppTheme.muted)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Text("Approved majors")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(AppTheme.muted)
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(AppTheme.muted)
+                        }
                         Text(authManager.currentUser?.managedSubjectsDisplay ?? "Not set")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(AppTheme.brandDeep)
-                        Text("Upload and delete only for these courses. You can still browse every other subject.")
-                            .font(.system(size: 12.5))
+                        Text("Admin-approved only. Request more subjects in Settings.")
+                            .font(.system(size: 11))
                             .foregroundColor(AppTheme.muted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
+                    .padding(10)
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(AppTheme.card)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(AppTheme.stroke, lineWidth: 1)
                     )
                     .padding(.horizontal, AppTheme.horizontalPadding)
@@ -91,9 +102,9 @@ struct ProfileView: View {
                         showUploadSheet = true
                     } label: {
                         Label("Upload Document or Lesson", systemImage: "arrow.up.doc.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 52)
+                            .frame(height: 46)
                             .background(
                                 LinearGradient(
                                     colors: [AppTheme.brand, AppTheme.brandDeep],
@@ -102,42 +113,43 @@ struct ProfileView: View {
                                 )
                             )
                             .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .shadow(color: AppTheme.brand.opacity(0.25), radius: 10, x: 0, y: 5)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .shadow(color: AppTheme.brand.opacity(0.22), radius: 8, x: 0, y: 4)
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
                 }
 
-                // MARK: Settings
-                NavigationLink(destination: SettingsView()) {
-                    HStack(spacing: 14) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(AppTheme.brand)
-                            .frame(width: 24)
-                        Text("Settings")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(AppTheme.ink)
-                        Spacer()
-                        Text("Theme")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(AppTheme.muted)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(AppTheme.muted.opacity(0.7))
+                // MARK: Quick links
+                VStack(spacing: 0) {
+                    NavigationLink(destination: SettingsView()) {
+                        linkRow(
+                            icon: "gearshape.fill",
+                            title: "Settings",
+                            value: authManager.currentUser?.isTutor == true
+                                ? "Request access · Theme"
+                                : (authManager.currentUser?.isStudent == true
+                                   ? "Form · Theme"
+                                   : "Theme")
+                        )
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(AppTheme.card)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(AppTheme.stroke, lineWidth: 1)
+                    .buttonStyle(.plain)
+
+                    Divider().padding(.leading, 48)
+
+                    profileRow(
+                        icon: "bookmark.fill",
+                        title: "Saved items",
+                        value: "\(saved.items.count)"
                     )
                 }
-                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(AppTheme.stroke, lineWidth: 1)
+                )
                 .padding(.horizontal, AppTheme.horizontalPadding)
 
                 // MARK: School (students)
@@ -150,7 +162,7 @@ struct ProfileView: View {
                                 ? (authManager.currentUser?.school ?? "—")
                                 : "Not set"
                         )
-                        Divider().padding(.leading, 52)
+                        Divider().padding(.leading, 48)
                         profileRow(
                             icon: "mappin.and.ellipse",
                             title: "District",
@@ -158,7 +170,7 @@ struct ProfileView: View {
                                 ? (authManager.currentUser?.schoolDistrict ?? "—")
                                 : "Not set"
                         )
-                        Divider().padding(.leading, 52)
+                        Divider().padding(.leading, 48)
                         profileRow(
                             icon: "graduationcap.fill",
                             title: "Grade",
@@ -168,59 +180,35 @@ struct ProfileView: View {
                         )
                     }
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(AppTheme.card)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(AppTheme.stroke, lineWidth: 1)
                     )
                     .padding(.horizontal, AppTheme.horizontalPadding)
                 }
 
-                // MARK: Account
-                VStack(spacing: 0) {
-                    profileRow(icon: "person.fill", title: "Account type", value: accountTypeLabel)
-                    Divider().padding(.leading, 52)
-                    profileRow(
-                        icon: "lock.shield.fill",
-                        title: "Content upload",
-                        value: canManageContent ? "Allowed" : "Students only view"
-                    )
-                    Divider().padding(.leading, 52)
-                    profileRow(icon: "bookmark.fill", title: "Saved items", value: "\(saved.items.count)")
-                    Divider().padding(.leading, 52)
-                    profileRow(icon: "info.circle.fill", title: "About", value: "Tricon Academy 1.0")
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(AppTheme.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(AppTheme.stroke, lineWidth: 1)
-                )
-                .padding(.horizontal, AppTheme.horizontalPadding)
-
                 Button(role: .destructive) {
                     showLogoutConfirm = true
                 } label: {
                     Text("Log Out")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(AppTheme.danger.opacity(0.10))
+                        .frame(height: 46)
+                        .background(AppTheme.dangerSoft)
                         .foregroundColor(AppTheme.danger)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
-                .padding(.top, 4)
+                .padding(.top, 2)
                 .accessibilityLabel("Log out")
 
-                Spacer(minLength: 32)
+                Spacer(minLength: 24)
             }
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .appScreen()
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showUploadSheet) {
@@ -242,22 +230,44 @@ struct ProfileView: View {
         return String(letters).uppercased()
     }
 
-    private func profileRow(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: 14) {
+    private func linkRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(AppTheme.brand)
-                .frame(width: 24)
+                .frame(width: 22)
             Text(title)
-                .font(.system(size: 15))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(AppTheme.ink)
             Spacer()
             Text(value)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 12.5, weight: .medium))
                 .foregroundColor(AppTheme.muted)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(AppTheme.subtle)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private func profileRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(AppTheme.brand)
+                .frame(width: 22)
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundColor(AppTheme.ink)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(AppTheme.muted)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
     }
 }
 

@@ -169,7 +169,7 @@ struct TriconAcademyLibraryView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppTheme.muted.opacity(0.7))
+                    .foregroundColor(AppTheme.subtle)
             }
         }
         .padding(16)
@@ -182,7 +182,7 @@ struct TriconAcademyLibraryView: View {
             RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
     }
 }
 
@@ -320,7 +320,7 @@ struct LibraryCategoryView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.muted.opacity(0.7))
+                .foregroundColor(AppTheme.subtle)
         }
         .padding(14)
         .background(
@@ -331,7 +331,7 @@ struct LibraryCategoryView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
+        .shadow(color: AppTheme.shadow, radius: 6, x: 0, y: 2)
     }
 }
 

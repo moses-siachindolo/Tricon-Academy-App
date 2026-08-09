@@ -223,6 +223,20 @@ struct ProfileStudentInfoUpdate: Encodable {
     }
 }
 
+/// Grade-only patch when a student changes form in Settings.
+struct ProfileGradeUpdate: Encodable {
+    let grade: String
+}
+
+/// Specialist majors patch when a tutor updates teaching subjects in Settings.
+struct ProfileSubjectMajorUpdate: Encodable {
+    let subjectMajor: String
+
+    enum CodingKeys: String, CodingKey {
+        case subjectMajor = "subject_major"
+    }
+}
+
 // MARK: - content_folders
 
 struct RemoteFolder: Codable, Identifiable, Equatable {

@@ -600,6 +600,43 @@ class AuthManager: ObservableObject {
         return .success(())
     }
 
+    /// Updates only the student's form / grade (from Settings). Locks Home + Browse to this form.
+    func updateStudentGrade(_ grade: String) async -> Result<Void, AuthError> {
+        guard var user = currentUser, user.role == .student else {
+            return .failure(.remote("Only students can change form."))
+        }
+
+        let gradeValue = grade.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !gradeValue.isEmpty, Level(rawValue: gradeValue) != nil else {
+            return .failure(.invalidCredentials)
+        }
+
+        if client.isConfigured {
+            do {
+                try await ensureValidCloudSession(forceRefresh: false)
+                let update = ProfileGradeUpdate(grade: gradeValue)
+                try await client.update(
+                    table: "profiles",
+                    query: "id=eq.\(user.id.uuidString)",
+                    values: update
+                )
+            } catch {
+                return .failure(mapRemoteError(error))
+            }
+        } else {
+            var accounts = loadAccounts()
+            guard let index = accounts.firstIndex(where: { $0.id == user.id }) else {
+                return .failure(.accountNotFound)
+            }
+            accounts[index].grade = gradeValue
+            saveAccounts(accounts)
+        }
+
+        user.grade = gradeValue
+        saveSession(user: user, persist: true)
+        return .success(())
+    }
+
     /// All student profiles (for admin / staff review). Excludes removed accounts.
     func fetchStudentProfiles() async -> Result<[RemoteProfile], AuthError> {
         switch await fetchAllProfiles() {
@@ -883,16 +920,49 @@ class AuthManager: ObservableObject {
         return .success(())
     }
 
-    /// Tutor asks super admin for permission to upload a non-specialist subject.
+    /// Tutor requests admin approval to manage additional subject(s).
+    /// Majors set at application are locked; only super admin can grant extras.
     func requestExtraSubject(_ subjectName: String) async -> Result<Void, AuthError> {
+        await requestExtraSubjects([subjectName])
+    }
+
+    /// Request one or more subjects (admin must approve before they appear on the dashboard).
+    func requestExtraSubjects(_ subjectNames: [String]) async -> Result<Void, AuthError> {
         guard var user = currentUser, user.role == .tutor else {
             return .failure(.remote("Only tutors can request extra subjects."))
         }
-        let clean = subjectName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else { return .failure(.invalidCredentials) }
+        guard user.tutorStatus == .approved else {
+            return .failure(.remote("Your tutor account must be approved first."))
+        }
+
+        let managedKeys = Set(user.managedSubjectNames.map { $0.lowercased() })
+        var seen = Set<String>()
+        var unique: [String] = []
+        for raw in subjectNames {
+            let name = User.canonicalizeSubjectName(raw)
+            guard !name.isEmpty else { continue }
+            let key = name.lowercased()
+            guard !managedKeys.contains(key) else { continue }
+            if seen.insert(key).inserted {
+                unique.append(name)
+            }
+        }
+        guard !unique.isEmpty else {
+            return .failure(.remote("Pick at least one subject you don’t already manage."))
+        }
+
+        // Merge with any existing pending request so tutors can add more before admin acts.
+        var pending = User.parseSubjectList(user.pendingSubjectRequest)
+        for name in unique {
+            if !pending.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+                pending.append(name)
+            }
+        }
+        let clean = pending.joined(separator: ", ")
 
         if client.isConfigured {
             do {
+                try await ensureValidCloudSession(forceRefresh: false)
                 try await client.update(
                     table: "profiles",
                     query: "id=eq.\(user.id.uuidString)",
@@ -914,7 +984,42 @@ class AuthManager: ObservableObject {
         return .success(())
     }
 
-    /// Super admin grants or denies an extra-subject request.
+    /// Tutor withdraws a pending subject-access request.
+    func cancelPendingSubjectRequest() async -> Result<Void, AuthError> {
+        guard var user = currentUser, user.role == .tutor else {
+            return .failure(.remote("Only tutors can cancel subject requests."))
+        }
+        let pending = user.pendingSubjectRequest?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !pending.isEmpty else { return .success(()) }
+
+        if client.isConfigured {
+            do {
+                try await ensureValidCloudSession(forceRefresh: false)
+                try await client.update(
+                    table: "profiles",
+                    query: "id=eq.\(user.id.uuidString)",
+                    values: ProfileAdminStatusUpdate(
+                        pendingSubjectRequest: nil,
+                        clearPendingSubjectRequest: true
+                    )
+                )
+            } catch {
+                return .failure(mapRemoteError(error))
+            }
+        } else {
+            var accounts = loadAccounts()
+            guard let index = accounts.firstIndex(where: { $0.id == user.id }) else {
+                return .failure(.accountNotFound)
+            }
+            accounts[index].pendingSubjectRequest = nil
+            saveAccounts(accounts)
+        }
+        user.pendingSubjectRequest = nil
+        saveSession(user: user, persist: true)
+        return .success(())
+    }
+
+    /// Super admin grants or denies an extra-subject request (supports comma-separated lists).
     func resolveExtraSubjectRequest(userId: UUID, approve: Bool) async -> Result<Void, AuthError> {
         guard currentUser?.isAdmin == true else {
             return .failure(.remote("Only super admins can approve subject access."))
@@ -931,12 +1036,14 @@ class AuthManager: ObservableObject {
                 guard !requested.isEmpty else {
                     return .failure(.remote("No pending subject request."))
                 }
-                var extras = (target.allowedExtraSubjects ?? "")
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .filter { !$0.isEmpty }
-                if approve, !extras.contains(where: { $0.caseInsensitiveCompare(requested) == .orderedSame }) {
-                    extras.append(requested)
+                let requestedList = User.parseSubjectList(requested)
+                var extras = User.parseSubjectList(target.allowedExtraSubjects)
+                if approve {
+                    for name in requestedList {
+                        if !extras.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+                            extras.append(name)
+                        }
+                    }
                 }
                 try await client.update(
                     table: "profiles",
@@ -962,12 +1069,11 @@ class AuthManager: ObservableObject {
             return .failure(.remote("No pending subject request."))
         }
         if approve {
-            var extras = (accounts[index].allowedExtraSubjects ?? "")
-                .split(separator: ",")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            if !extras.contains(where: { $0.caseInsensitiveCompare(requested) == .orderedSame }) {
-                extras.append(requested)
+            var extras = User.parseSubjectList(accounts[index].allowedExtraSubjects)
+            for name in User.parseSubjectList(requested) {
+                if !extras.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+                    extras.append(name)
+                }
             }
             accounts[index].allowedExtraSubjects = extras.joined(separator: ", ")
         }

@@ -43,6 +43,7 @@
 		A8F10003200B000200059F79 /* ContentLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F10002200B000200059F79 /* ContentLibrary.swift */; };
 		A9C10001200C000100059F79 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10000200C000100059F79 /* AppSettings.swift */; };
 		A9C10003200C000200059F79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10002200C000200059F79 /* SettingsView.swift */; };
+		A9D100012016000100059F79 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D100002016000100059F79 /* DesignSystem.swift */; };
 		A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20000200E000100059F79 /* SupabaseConfig.swift */; };
 		A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20002200E000200059F79 /* SupabaseClient.swift */; };
 		A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20004200E000300059F79 /* SupabaseModels.swift */; };
@@ -118,6 +119,7 @@
 		A8F10002200B000200059F79 /* ContentLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentLibrary.swift; sourceTree = "<group>"; };
 		A9C10000200C000100059F79 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A9C10002200C000200059F79 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A9D100002016000100059F79 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		A9S20000200E000100059F79 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		A9S20002200E000200059F79 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
 		A9S20004200E000300059F79 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				A6B1C0043003A00300059F79 /* BrowseView.swift */,
 				A6B1C0023003A00200059F79 /* ProfileView.swift */,
 				A9C10002200C000200059F79 /* SettingsView.swift */,
+				A9D100002016000100059F79 /* DesignSystem.swift */,
 				A9L400002010000100059F79 /* LevelPickerComponents.swift */,
 				A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */,
 				A609457F2FFAF1D5000482FF /* SubjectListView.swift */,
@@ -464,6 +467,7 @@
 				A8F10003200B000200059F79 /* ContentLibrary.swift in Sources */,
 				A9C10001200C000100059F79 /* AppSettings.swift in Sources */,
 				A9C10003200C000200059F79 /* SettingsView.swift in Sources */,
+				A9D100012016000100059F79 /* DesignSystem.swift in Sources */,
 				A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */,
 				A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */,
 				A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */,

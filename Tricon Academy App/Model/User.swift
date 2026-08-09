@@ -129,6 +129,29 @@ struct User: Codable, Identifiable {
         return names.joined(separator: " · ")
     }
 
+    /// Catalogue `Subject` rows for the tutor dashboard (majors + approved extras only).
+    var managedSubjects: [Subject] {
+        let names = managedSubjectNames
+        guard !names.isEmpty else { return [] }
+        let catalogue = Self.catalogueSubjects
+        return names.compactMap { name in
+            catalogue.first { Self.subjectsMatch($0.name, name) }
+        }
+    }
+
+    /// Subjects the tutor may open from Settings for view-only browsing (not on their major list).
+    var otherCatalogueSubjects: [Subject] {
+        let managed = Set(managedSubjectNames.map { Self.canonicalizeSubjectName($0).lowercased() })
+        return Self.catalogueSubjects.filter {
+            !managed.contains(Self.canonicalizeSubjectName($0.name).lowercased())
+        }
+    }
+
+    /// Core + optional subjects as `Subject` models (excludes the synthetic “Optionals” group card).
+    static var catalogueSubjects: [Subject] {
+        allSubjects.filter { $0.name != "Optionals" } + optionalSubjects
+    }
+
     /// Whether this staff user can upload/delete/organise content for a subject.
     /// Everyone may still **view** any subject. Unapproved tutors cannot manage.
     func canManageSubject(_ subjectName: String) -> Bool {
@@ -215,6 +238,17 @@ struct User: Codable, Identifiable {
         let districtOk = !(schoolDistrict?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         let gradeOk = !(grade?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         return !(schoolOk && districtOk && gradeOk)
+    }
+
+    /// Learner's locked form from registration / settings. `nil` for staff or missing grade.
+    var studentLevel: Level? {
+        guard isStudent else { return nil }
+        guard let grade = grade?.trimmingCharacters(in: .whitespacesAndNewlines), !grade.isEmpty,
+              let level = Level(rawValue: grade),
+              Level.activeCases.contains(level) else {
+            return nil
+        }
+        return level
     }
 
     init(

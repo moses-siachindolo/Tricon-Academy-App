@@ -36,7 +36,7 @@ struct OptionalsListView: View {
             .padding(.top, 12)
             .padding(.bottom, 28)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .appScreen()
         .navigationTitle("Optionals")
         .navigationBarTitleDisplayMode(.inline)
     }

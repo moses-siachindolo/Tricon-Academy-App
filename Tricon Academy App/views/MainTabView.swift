@@ -61,6 +61,7 @@ struct MainTabView: View {
             .tag(isStaff ? 4 : 3)
         }
         .accentColor(AppTheme.brand)
+        .tint(AppTheme.brand)
         // If a staff user logs out and a student logs in (or vice versa),
         // keep the selected tab in a valid range.
         .onChange(of: isStaff) { _ in

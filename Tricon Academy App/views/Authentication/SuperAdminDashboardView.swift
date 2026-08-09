@@ -81,20 +81,24 @@ struct SuperAdminDashboardView: View {
                     if !subjectRequests.isEmpty {
                         Section("Tutor subject access requests") {
                             ForEach(subjectRequests) { profile in
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 6) {
                                     Text(profile.fullName)
-                                        .font(.system(size: 15, weight: .semibold))
-                                    Text("Requests: \(profile.pendingSubjectRequest ?? "") · Specialist: \(profile.subjectMajor ?? "—")")
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Text("Requesting: \(profile.pendingSubjectRequest ?? "—")")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(AppTheme.brandDeep)
+                                    Text("Current majors: \(profile.subjectMajor ?? "—")")
+                                        .font(.system(size: 11.5))
                                         .foregroundColor(AppTheme.muted)
-                                    HStack {
-                                        Button("Grant access") {
+                                    HStack(spacing: 8) {
+                                        Button("Approve") {
                                             Task {
                                                 _ = await authManager.resolveExtraSubjectRequest(userId: profile.id, approve: true)
                                                 await load()
                                             }
                                         }
                                         .buttonStyle(.borderedProminent)
+                                        .controlSize(.small)
                                         Button("Deny") {
                                             Task {
                                                 _ = await authManager.resolveExtraSubjectRequest(userId: profile.id, approve: false)
@@ -102,9 +106,10 @@ struct SuperAdminDashboardView: View {
                                             }
                                         }
                                         .buttonStyle(.bordered)
+                                        .controlSize(.small)
                                     }
                                 }
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 2)
                             }
                         }
                     }

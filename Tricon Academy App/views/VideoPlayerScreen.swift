@@ -137,7 +137,7 @@ struct VideoPlayerScreen: View {
                         toggleBookmark()
                     } label: {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .foregroundColor(isBookmarked ? Color(red: 0.95, green: 0.48, blue: 0.18) : AppTheme.brandDeep)
+                            .foregroundColor(isBookmarked ? AppTheme.bookmark : AppTheme.brandDeep)
                     }
                 }
             }

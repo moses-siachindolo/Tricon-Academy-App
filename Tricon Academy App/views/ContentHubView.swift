@@ -57,39 +57,48 @@ struct ContentHubView: View {
             + CurriculumData.videos(level: level, subject: subject.name)
     }
 
+    private var papersTotal: Int {
+        library.folders(level: level, subject: subject.name, section: .papers, parentId: nil).count
+            + library.papers(level: level, subject: subject.name, unfiledOnly: true).count
+            + CurriculumData.pastPapers(level: level, subject: subject.name).count
+    }
+
+    private var notesTotal: Int {
+        library.folders(level: level, subject: subject.name, section: .notes, parentId: nil).count
+            + library.materials(level: level, subject: subject.name, unfiledOnly: true).count
+            + CurriculumData.materials(level: level, subject: subject.name).count
+    }
+
+    private var videosTotal: Int {
+        library.folders(level: level, subject: subject.name, section: .videos, parentId: nil).count
+            + library.videos(level: level, subject: subject.name, unfiledOnly: true).count
+            + CurriculumData.videos(level: level, subject: subject.name).count
+    }
+
+    private var sectionAccent: Color { AppTheme.color(for: currentSection) }
+    private var sectionSoft: Color { AppTheme.softColor(for: currentSection) }
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(subject.swiftUIColor.opacity(0.14))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: subject.icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(subject.swiftUIColor)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(subject.name)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(AppTheme.ink)
-                    Text(level.rawValue)
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundColor(AppTheme.muted)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, AppTheme.horizontalPadding)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
+            header
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.top, 6)
+                .padding(.bottom, 14)
 
-            Picker("Content type", selection: $selectedTab) {
-                Text("Papers").tag(0)
-                Text("Notes").tag(1)
-                Text("Videos").tag(2)
-            }
-            .pickerStyle(.segmented)
+            ContentTypeSelector(
+                selection: $selectedTab,
+                tabs: ContentTypeSelector.subjectTabs(
+                    papers: papersTotal,
+                    notes: notesTotal,
+                    videos: videosTotal
+                )
+            )
             .padding(.horizontal, AppTheme.horizontalPadding)
-            .padding(.bottom, 12)
+            .padding(.bottom, 10)
+
+            sectionContextBar
+                .padding(.horizontal, AppTheme.horizontalPadding)
+                .padding(.bottom, 12)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
@@ -101,15 +110,18 @@ struct ContentHubView: View {
                         } label: {
                             Label("New folder in \(currentSection.displayName)", systemImage: "folder.badge.plus")
                                 .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(sectionAccent)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(AppTheme.brandSoft)
-                                .foregroundColor(AppTheme.brandDeep)
+                                .frame(height: 46)
+                                .background(sectionSoft)
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(sectionAccent.opacity(0.28), lineWidth: 1)
+                                )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SoftPressStyle())
                     } else if authManager.currentUser?.isTutor == true {
-                        // Tutor can view this subject but not organise it.
                         Label(
                             "View only — you can manage: \(authManager.currentUser?.managedSubjectsDisplay ?? "your specialist subjects")",
                             systemImage: "eye.fill"
@@ -117,6 +129,11 @@ struct ContentHubView: View {
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundColor(AppTheme.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(AppTheme.fill)
+                        )
                     }
 
                     // Folders
@@ -128,12 +145,14 @@ struct ContentHubView: View {
                     switch selectedTab {
                     case 0:
                         if sectionFolders.isEmpty && rootPapers.isEmpty {
-                            emptyState(
+                            AppEmptyState(
                                 icon: "doc.text.magnifyingglass",
                                 title: "No past papers yet",
                                 message: canManage
                                     ? "Create a year folder (e.g. 2018) or upload papers for \(subject.name)."
-                                    : "Past papers for \(subject.name) at \(level.rawValue) will show up here."
+                                    : "Past papers for \(subject.name) at \(level.rawValue) will show up here.",
+                                accent: AppTheme.papers,
+                                soft: AppTheme.papersSoft
                             )
                         } else {
                             if !rootPapers.isEmpty && !sectionFolders.isEmpty {
@@ -144,7 +163,8 @@ struct ContentHubView: View {
                                     icon: "doc.text.fill",
                                     title: paper.title,
                                     subtitle: "\(paper.year) · Past paper",
-                                    color: Color(red: 0.20, green: 0.48, blue: 0.92),
+                                    color: AppTheme.papers,
+                                    soft: AppTheme.papersSoft,
                                     isSaved: saved.isSaved(id: paper.id),
                                     onBookmark: { saved.togglePaper(paper) },
                                     onDelete: deleteAction(forContentId: paper.id),
@@ -162,12 +182,14 @@ struct ContentHubView: View {
                         }
                     case 1:
                         if sectionFolders.isEmpty && rootMaterials.isEmpty {
-                            emptyState(
+                            AppEmptyState(
                                 icon: "note.text",
-                                title: "No materials yet",
+                                title: "No study notes yet",
                                 message: canManage
                                     ? "Create a topic folder (e.g. Kinematics) or upload notes for \(subject.name)."
-                                    : "Study notes for \(subject.name) will appear here when available."
+                                    : "Study notes for \(subject.name) will appear here when available.",
+                                accent: AppTheme.notes,
+                                soft: AppTheme.notesSoft
                             )
                         } else {
                             if !rootMaterials.isEmpty && !sectionFolders.isEmpty {
@@ -178,7 +200,8 @@ struct ContentHubView: View {
                                     icon: "note.text",
                                     title: material.title,
                                     subtitle: material.topic,
-                                    color: Color(red: 0.10, green: 0.62, blue: 0.55),
+                                    color: AppTheme.notes,
+                                    soft: AppTheme.notesSoft,
                                     isSaved: saved.isSaved(id: material.id),
                                     onBookmark: { saved.toggleMaterial(material) },
                                     onDelete: deleteAction(forContentId: material.id),
@@ -196,12 +219,14 @@ struct ContentHubView: View {
                         }
                     default:
                         if sectionFolders.isEmpty && rootVideos.isEmpty {
-                            emptyState(
-                                icon: "play.rectangle",
-                                title: "No videos yet",
+                            AppEmptyState(
+                                icon: "play.rectangle.fill",
+                                title: "No video lessons yet",
                                 message: canManage
                                     ? "Create a topic folder or upload video lessons for \(subject.name)."
-                                    : "Video lessons for \(subject.name) will show up here."
+                                    : "Video lessons for \(subject.name) will show up here.",
+                                accent: AppTheme.videos,
+                                soft: AppTheme.videosSoft
                             )
                         } else {
                             if !rootVideos.isEmpty && !sectionFolders.isEmpty {
@@ -212,7 +237,8 @@ struct ContentHubView: View {
                                     icon: "play.circle.fill",
                                     title: video.title,
                                     subtitle: "\(video.topic) · \(video.durationLabel)",
-                                    color: Color(red: 0.52, green: 0.32, blue: 0.88),
+                                    color: AppTheme.videos,
+                                    soft: AppTheme.videosSoft,
                                     isSaved: saved.isSaved(id: video.id),
                                     onBookmark: { saved.toggleVideo(video) },
                                     onDelete: deleteAction(forContentId: video.id),
@@ -235,7 +261,7 @@ struct ContentHubView: View {
                 .padding(.bottom, 28)
             }
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .appScreen()
         .navigationTitle(subject.name)
         .navigationBarTitleDisplayMode(.inline)
         .alert("New folder", isPresented: $showCreateFolder) {
@@ -249,6 +275,86 @@ struct ContentHubView: View {
         }
         .deleteFolderConfirmation($folderPendingDeletion, itemNoun: "folder") { folder, deleteContents in
             library.removeFolder(id: folder.id, deleteContents: deleteContents)
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [subject.swiftUIColor.opacity(0.22), subject.swiftUIColor.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 52, height: 52)
+                Image(systemName: subject.icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(subject.swiftUIColor)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(subject.name)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(AppTheme.ink)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(level.rawValue)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundColor(AppTheme.muted)
+                    Text("·")
+                        .foregroundColor(AppTheme.subtle)
+                    Text(currentSection.displayName)
+                        .font(.system(size: 12.5, weight: .bold))
+                        .foregroundColor(sectionAccent)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AppTheme.stroke, lineWidth: 1)
+        )
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
+    }
+
+    private var sectionContextBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: AppTheme.icon(for: currentSection))
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(sectionAccent)
+            Text(sectionHint)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundColor(AppTheme.muted)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(sectionSoft)
+        )
+    }
+
+    private var sectionHint: String {
+        switch currentSection {
+        case .papers:
+            return "Past exam papers by year — practice under real conditions."
+        case .notes:
+            return "Topic notes and study materials for revision."
+        case .videos:
+            return "Video lessons you can watch anytime to reinforce each topic."
         }
     }
 
@@ -266,11 +372,13 @@ struct ContentHubView: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 13, weight: .semibold))
+        Text(text.uppercased())
+            .font(.system(size: 11.5, weight: .bold))
+            .tracking(0.6)
             .foregroundColor(AppTheme.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 8)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
     }
 
     /// Folder row + (staff only) a visible manage button that offers delete.
@@ -298,7 +406,7 @@ struct ContentHubView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
         .contextMenu {
             if canManage {
                 Button(role: .destructive) {
@@ -315,11 +423,11 @@ struct ContentHubView: View {
         return HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(red: 0.95, green: 0.72, blue: 0.20).opacity(0.18))
+                    .fill(AppTheme.folderSoft)
                     .frame(width: 44, height: 44)
                 Image(systemName: "folder.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Color(red: 0.90, green: 0.62, blue: 0.12))
+                    .foregroundColor(AppTheme.folder)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -336,33 +444,8 @@ struct ContentHubView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.muted.opacity(0.7))
+                .foregroundColor(AppTheme.subtle)
         }
-    }
-
-    @ViewBuilder
-    private func emptyState(icon: String, title: String, message: String) -> some View {
-        VStack(spacing: 12) {
-            Spacer().frame(height: 36)
-            ZStack {
-                Circle()
-                    .fill(AppTheme.brandSoft)
-                    .frame(width: 72, height: 72)
-                Image(systemName: icon)
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundColor(AppTheme.brandDeep)
-            }
-            Text(title)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(AppTheme.ink)
-            Text(message)
-                .font(.system(size: 14))
-                .foregroundColor(AppTheme.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-            Spacer().frame(height: 36)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     /// Delete only for library uploads (not sample curriculum), and only when staff can manage this subject.
@@ -385,6 +468,7 @@ struct ContentHubView: View {
         title: String,
         subtitle: String,
         color: Color,
+        soft: Color,
         isSaved: Bool,
         onBookmark: @escaping () -> Void,
         onDelete: (() -> Void)? = nil,
@@ -395,8 +479,8 @@ struct ContentHubView: View {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(color.opacity(0.14))
-                            .frame(width: 44, height: 44)
+                            .fill(soft)
+                            .frame(width: 46, height: 46)
                         Image(systemName: icon)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(color)
@@ -418,7 +502,7 @@ struct ContentHubView: View {
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AppTheme.muted.opacity(0.7))
+                        .foregroundColor(AppTheme.subtle)
                 }
             }
             .buttonStyle(.plain)
@@ -428,11 +512,11 @@ struct ContentHubView: View {
             } label: {
                 Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(isSaved ? Color(red: 0.95, green: 0.48, blue: 0.18) : AppTheme.muted)
-                    .frame(width: 36, height: 36)
+                    .foregroundColor(isSaved ? AppTheme.bookmark : AppTheme.muted)
+                    .frame(width: 38, height: 38)
                     .background(
                         Circle()
-                            .fill(AppTheme.stroke)
+                            .fill(isSaved ? AppTheme.bookmark.opacity(0.14) : AppTheme.fill)
                     )
             }
             .buttonStyle(.borderless)
@@ -443,8 +527,8 @@ struct ContentHubView: View {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppTheme.danger)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(AppTheme.danger.opacity(0.10)))
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(AppTheme.dangerSoft))
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Delete content")
@@ -459,7 +543,7 @@ struct ContentHubView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
     }
 }
 
@@ -505,28 +589,41 @@ struct FolderContentsView: View {
         library.videos(level: level, subject: subject.name, folderId: folder.id)
     }
 
-    private var hasContent: Bool {
-        !miniFolders.isEmpty || !papers.isEmpty || !materials.isEmpty || !videos.isEmpty
-    }
+    private var sectionAccent: Color { AppTheme.color(for: folder.section) }
+    private var sectionSoft: Color { AppTheme.softColor(for: folder.section) }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(red: 0.90, green: 0.62, blue: 0.12))
-                    VStack(alignment: .leading, spacing: 2) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(AppTheme.folderSoft)
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "folder.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(AppTheme.folder)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(folder.name)
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(AppTheme.ink)
                         Text("\(folder.section.displayName) · \(subject.name) · \(level.rawValue)")
-                            .font(.system(size: 12.5))
+                            .font(.system(size: 12.5, weight: .medium))
                             .foregroundColor(AppTheme.muted)
                     }
                     Spacer()
                 }
-                .padding(.bottom, 6)
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(AppTheme.stroke, lineWidth: 1)
+                )
+                .padding(.bottom, 4)
 
                 if canManage {
                     Button {
@@ -536,13 +633,17 @@ struct FolderContentsView: View {
                     } label: {
                         Label("New mini folder", systemImage: "folder.badge.plus")
                             .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(sectionAccent)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(AppTheme.brandSoft)
-                            .foregroundColor(AppTheme.brandDeep)
+                            .frame(height: 46)
+                            .background(sectionSoft)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(sectionAccent.opacity(0.28), lineWidth: 1)
+                            )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SoftPressStyle())
                 }
 
                 ForEach(miniFolders) { child in
@@ -553,23 +654,23 @@ struct FolderContentsView: View {
                             HStack(spacing: 12) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color(red: 0.90, green: 0.62, blue: 0.12).opacity(0.16))
+                                        .fill(AppTheme.folderSoft)
                                         .frame(width: 44, height: 44)
                                     Image(systemName: "folder.fill")
-                                        .foregroundColor(Color(red: 0.90, green: 0.62, blue: 0.12))
+                                        .foregroundColor(AppTheme.folder)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(child.name)
                                         .font(.system(size: 15, weight: .semibold))
                                         .foregroundColor(AppTheme.ink)
                                     Text("Mini folder · \(library.itemCount(in: child.id)) items")
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(AppTheme.muted)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(AppTheme.muted.opacity(0.7))
+                                    .foregroundColor(AppTheme.subtle)
                             }
                         }
                         .buttonStyle(.plain)
@@ -610,7 +711,8 @@ struct FolderContentsView: View {
                                 icon: "doc.text.fill",
                                 title: paper.title,
                                 subtitle: "\(paper.year) · Past paper",
-                                color: Color(red: 0.20, green: 0.48, blue: 0.92),
+                                color: AppTheme.papers,
+                                soft: AppTheme.papersSoft,
                                 isSaved: saved.isSaved(id: paper.id),
                                 onBookmark: { saved.togglePaper(paper) },
                                 onDelete: folderDeleteAction(forContentId: paper.id),
@@ -635,7 +737,8 @@ struct FolderContentsView: View {
                                 icon: "note.text",
                                 title: material.title,
                                 subtitle: material.topic,
-                                color: Color(red: 0.10, green: 0.62, blue: 0.55),
+                                color: AppTheme.notes,
+                                soft: AppTheme.notesSoft,
                                 isSaved: saved.isSaved(id: material.id),
                                 onBookmark: { saved.toggleMaterial(material) },
                                 onDelete: folderDeleteAction(forContentId: material.id),
@@ -660,7 +763,8 @@ struct FolderContentsView: View {
                                 icon: "play.circle.fill",
                                 title: video.title,
                                 subtitle: "\(video.topic) · \(video.durationLabel)",
-                                color: Color(red: 0.52, green: 0.32, blue: 0.88),
+                                color: AppTheme.videos,
+                                soft: AppTheme.videosSoft,
                                 isSaved: saved.isSaved(id: video.id),
                                 onBookmark: { saved.toggleVideo(video) },
                                 onDelete: folderDeleteAction(forContentId: video.id),
@@ -683,7 +787,7 @@ struct FolderContentsView: View {
             .padding(.top, 12)
             .padding(.bottom, 28)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .appScreen()
         .navigationTitle(folder.name)
         .navigationBarTitleDisplayMode(.inline)
         .alert("New mini folder", isPresented: $showCreateSubfolder) {
@@ -715,6 +819,7 @@ struct FolderContentsView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .foregroundColor(AppTheme.brandDeep)
                     }
                     .accessibilityLabel("Manage folder \(folder.name)")
                 }
@@ -730,24 +835,15 @@ struct FolderContentsView: View {
     }
 
     private var emptyFolder: some View {
-        VStack(spacing: 10) {
-            Spacer().frame(height: 40)
-            Image(systemName: "folder")
-                .font(.system(size: 36))
-                .foregroundColor(AppTheme.muted)
-            Text("This folder is empty")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppTheme.ink)
-            Text(canManage
-                 ? "Add a mini folder, or upload content and choose this folder."
-                 : "Content will appear here when staff uploads it.")
-                .font(.system(size: 13.5))
-                .foregroundColor(AppTheme.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Spacer().frame(height: 40)
-        }
-        .frame(maxWidth: .infinity)
+        AppEmptyState(
+            icon: "folder",
+            title: "This folder is empty",
+            message: canManage
+                ? "Add a mini folder, or upload content and choose this folder."
+                : "Content will appear here when staff uploads it.",
+            accent: sectionAccent,
+            soft: sectionSoft
+        )
     }
 
     private func folderDeleteAction(forContentId contentId: String) -> (() -> Void)? {
@@ -760,6 +856,7 @@ struct FolderContentsView: View {
         title: String,
         subtitle: String,
         color: Color,
+        soft: Color,
         isSaved: Bool,
         onBookmark: @escaping () -> Void,
         onDelete: (() -> Void)? = nil,
@@ -770,8 +867,8 @@ struct FolderContentsView: View {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(color.opacity(0.14))
-                            .frame(width: 44, height: 44)
+                            .fill(soft)
+                            .frame(width: 46, height: 46)
                         Image(systemName: icon)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(color)
@@ -789,7 +886,7 @@ struct FolderContentsView: View {
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AppTheme.muted.opacity(0.7))
+                        .foregroundColor(AppTheme.subtle)
                 }
             }
             .buttonStyle(.plain)
@@ -797,9 +894,9 @@ struct FolderContentsView: View {
             Button(action: onBookmark) {
                 Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(isSaved ? Color(red: 0.95, green: 0.48, blue: 0.18) : AppTheme.muted)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(AppTheme.stroke))
+                    .foregroundColor(isSaved ? AppTheme.bookmark : AppTheme.muted)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(isSaved ? AppTheme.bookmark.opacity(0.14) : AppTheme.fill))
             }
             .buttonStyle(.borderless)
 
@@ -808,8 +905,8 @@ struct FolderContentsView: View {
                     Image(systemName: "trash")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(AppTheme.danger)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(AppTheme.danger.opacity(0.10)))
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(AppTheme.dangerSoft))
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Delete content")
@@ -844,8 +941,8 @@ struct FolderManageButton: View {
             Image(systemName: "trash")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(AppTheme.danger)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(AppTheme.danger.opacity(0.10)))
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(AppTheme.dangerSoft))
                 .contentShape(Circle())
         }
         .buttonStyle(.borderless)

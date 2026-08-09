@@ -4,24 +4,24 @@ import SwiftUI
 struct SavedItemsView: View {
 
     @ObservedObject private var saved = SavedItemsManager.shared
-    @State private var filter: Filter = .all
-
-    private enum Filter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case papers = "Papers"
-        case notes = "Notes"
-        case videos = "Videos"
-
-        var id: String { rawValue }
-    }
+    @State private var filter: Int = 0
 
     private var filtered: [SavedItem] {
         switch filter {
-        case .all: return saved.items
-        case .papers: return saved.items.filter { $0.kind == .paper }
-        case .notes: return saved.items.filter { $0.kind == .material }
-        case .videos: return saved.items.filter { $0.kind == .video }
+        case 1: return saved.items.filter { $0.kind == .paper }
+        case 2: return saved.items.filter { $0.kind == .material }
+        case 3: return saved.items.filter { $0.kind == .video }
+        default: return saved.items
         }
+    }
+
+    private var filterTabs: [ContentTypeSelector.ContentTypeTab] {
+        [
+            .init(id: 0, title: "All", icon: "square.grid.2x2.fill", color: AppTheme.brandBright, soft: AppTheme.brandSoft, count: saved.items.count),
+            .init(id: 1, title: "Papers", icon: "doc.text.fill", color: AppTheme.papers, soft: AppTheme.papersSoft, count: saved.items.filter { $0.kind == .paper }.count),
+            .init(id: 2, title: "Notes", icon: "note.text", color: AppTheme.notes, soft: AppTheme.notesSoft, count: saved.items.filter { $0.kind == .material }.count),
+            .init(id: 3, title: "Videos", icon: "play.rectangle.fill", color: AppTheme.videos, soft: AppTheme.videosSoft, count: saved.items.filter { $0.kind == .video }.count)
+        ]
     }
 
     var body: some View {
@@ -29,32 +29,38 @@ struct SavedItemsView: View {
             if saved.items.isEmpty {
                 emptyState
             } else {
-                Picker("Filter", selection: $filter) {
-                    ForEach(Filter.allCases) { item in
-                        Text(item.rawValue).tag(item)
-                    }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    ContentTypeSelector(selection: $filter, tabs: filterTabs, equalWidth: false)
+                        .padding(.horizontal, AppTheme.horizontalPadding)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, AppTheme.horizontalPadding)
                 .padding(.top, 10)
                 .padding(.bottom, 12)
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 10) {
-                        ForEach(filtered) { item in
-                            NavigationLink(destination: destination(for: item)) {
-                                savedRow(item)
+                if filtered.isEmpty {
+                    AppEmptyState(
+                        icon: "bookmark.slash",
+                        title: "Nothing in this filter",
+                        message: "Try another category, or save more content while browsing.",
+                        accent: AppTheme.bookmark,
+                        soft: AppTheme.bookmark.opacity(0.14)
+                    )
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 10) {
+                            ForEach(filtered) { item in
+                                NavigationLink(destination: destination(for: item)) {
+                                    savedRow(item)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, AppTheme.horizontalPadding)
+                        .padding(.bottom, 28)
                     }
-                    .padding(.horizontal, AppTheme.horizontalPadding)
-                    .padding(.bottom, 28)
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .appScreen()
         .navigationTitle("Saved")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -70,36 +76,22 @@ struct SavedItemsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 14) {
-            Spacer()
-            ZStack {
-                Circle()
-                    .fill(Color(red: 0.95, green: 0.48, blue: 0.18).opacity(0.14))
-                    .frame(width: 78, height: 78)
-                Image(systemName: "bookmark.fill")
-                    .font(.system(size: 30, weight: .medium))
-                    .foregroundColor(Color(red: 0.95, green: 0.48, blue: 0.18))
-            }
-            Text("No saved items yet")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(AppTheme.ink)
-            Text("Tap the bookmark on any paper, note, or video to keep it here for quick access.")
-                .font(.system(size: 14))
-                .foregroundColor(AppTheme.muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
+        AppEmptyState(
+            icon: "bookmark.fill",
+            title: "No saved items yet",
+            message: "Tap the bookmark on any paper, note, or video to keep it here for quick access.",
+            accent: AppTheme.bookmark,
+            soft: AppTheme.bookmark.opacity(0.14)
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func savedRow(_ item: SavedItem) -> some View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(color(for: item.kind).opacity(0.14))
-                    .frame(width: 44, height: 44)
+                    .fill(soft(for: item.kind))
+                    .frame(width: 46, height: 46)
                 Image(systemName: item.icon)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(color(for: item.kind))
@@ -123,15 +115,15 @@ struct SavedItemsView: View {
             } label: {
                 Image(systemName: "bookmark.fill")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(red: 0.95, green: 0.48, blue: 0.18))
+                    .foregroundColor(AppTheme.bookmark)
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.black.opacity(0.04)))
+                    .background(Circle().fill(AppTheme.bookmark.opacity(0.14)))
             }
             .buttonStyle(.plain)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.muted.opacity(0.7))
+                .foregroundColor(AppTheme.subtle)
         }
         .padding(14)
         .background(
@@ -140,16 +132,24 @@ struct SavedItemsView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(AppTheme.stroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
+        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
     }
 
     private func color(for kind: SavedItemKind) -> Color {
         switch kind {
-        case .paper: return Color(red: 0.20, green: 0.48, blue: 0.92)
-        case .material: return Color(red: 0.10, green: 0.62, blue: 0.55)
-        case .video: return Color(red: 0.52, green: 0.32, blue: 0.88)
+        case .paper: return AppTheme.papers
+        case .material: return AppTheme.notes
+        case .video: return AppTheme.videos
+        }
+    }
+
+    private func soft(for kind: SavedItemKind) -> Color {
+        switch kind {
+        case .paper: return AppTheme.papersSoft
+        case .material: return AppTheme.notesSoft
+        case .video: return AppTheme.videosSoft
         }
     }
 

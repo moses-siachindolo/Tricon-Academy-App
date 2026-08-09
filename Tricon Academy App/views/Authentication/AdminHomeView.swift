@@ -145,7 +145,7 @@ struct AdminHomeView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                    .stroke(AppTheme.stroke, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -206,7 +206,7 @@ struct AdminHomeView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                        .stroke(AppTheme.stroke, lineWidth: 1)
                                 )
                         }
                         .buttonStyle(.plain)
@@ -426,7 +426,7 @@ struct AdminHomeView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                .stroke(AppTheme.stroke, lineWidth: 1)
         )
     }
 }
