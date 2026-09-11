@@ -4,6 +4,7 @@ import UIKit
 struct RegisterView: View {
 
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var firstName = ""
     @State private var lastName = ""
@@ -25,14 +26,12 @@ struct RegisterView: View {
         case firstName, lastName, email, password, confirmPassword
     }
 
-    // MARK: - Palette (entry green — independent of post-login blue brand)
+    // MARK: - Palette
 
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
     private let mutedIcon = AppTheme.secondaryInk
-    private let fieldFill = AppTheme.field
     private let brand = AppTheme.brand
-    private let brandDeep = AppTheme.brandDeep
     private let danger = AppTheme.danger
 
     private var fullName: String {
@@ -51,10 +50,6 @@ struct RegisterView: View {
             && !isLoading
     }
 
-    private var emailIsInvalid: Bool {
-        !email.isEmpty && !isValidEmail(email)
-    }
-
     private var passwordsMismatch: Bool {
         !confirmPassword.isEmpty && password != confirmPassword
     }
@@ -62,17 +57,13 @@ struct RegisterView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                canvas.ignoresSafeArea()
+                AuthBackdrop()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        Text("Create account")
-                            .appFont(size: 26, weight: .semibold)
-                            .foregroundColor(ink)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 8)
-                            .padding(.bottom, 20)
+                        AuthHeading(title: "Create account", icon: "graduationcap.fill")
+                            .padding(.top, 20)
+                            .padding(.bottom, 28)
 
                         VStack(spacing: 14) {
                             minimalField(
@@ -100,16 +91,19 @@ struct RegisterView: View {
                                 autocap: .never
                             )
 
-                            if emailIsInvalid {
-                                fieldHint("Enter a valid email address.")
-                            }
-
                             minimalSecureField(
                                 placeholder: "Password",
                                 text: $password,
                                 field: .password,
                                 isVisible: $showPassword
                             )
+
+                            Text("Use at least 6 characters.")
+                                .appFont(size: 12.5, weight: .medium)
+                                .foregroundColor(AppTheme.muted)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 6)
+                                .padding(.top, -4)
 
                             minimalSecureField(
                                 placeholder: "Confirm password",
@@ -129,23 +123,24 @@ struct RegisterView: View {
                                 .foregroundColor(danger)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
+                                .padding(14)
+                                .background(AppTheme.dangerSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .padding(.top, 14)
                         }
 
-                        // Brand green CTA — solid, high contrast
                         Button {
                             Task { await handleRegister() }
                         } label: {
                             ZStack {
                                 if isLoading {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.secondaryInk))
                                 } else {
-                                    Text("Create Account")
+                                    Label("Create Account", systemImage: "arrow.right")
                                 }
                             }
                         }
-                        .buttonStyle(AppPrimaryButtonStyle())
+                        .buttonStyle(AuthPrimaryButtonStyle())
                         .disabled(!canSubmit)
                         .padding(.top, 22)
 
@@ -158,8 +153,10 @@ struct RegisterView: View {
                                 Text("Log In")
                                     .appFont(size: 15, weight: .bold)
                                     .foregroundColor(brand)
-                                    .underline()
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                                    .background(AppTheme.brandSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             }
+                            .buttonStyle(SoftPressStyle())
                         }
                         .padding(.top, 20)
 
@@ -184,16 +181,22 @@ struct RegisterView: View {
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .foregroundColor(brand)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 48)
+                            .background(AppTheme.brandSoft, in: Capsule())
+                            .overlay(Capsule().strokeBorder(brand.opacity(0.15), lineWidth: 1))
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 24)
 
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: 480)
+                    .frame(maxWidth: .infinity)
                     .frame(minHeight: geo.size.height, alignment: .top)
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 10)
+                    .offset(y: appeared || reduceMotion ? 0 : 10)
                 }
             }
         }
@@ -201,9 +204,10 @@ struct RegisterView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(canvas, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .tint(brand)
         .disabled(isLoading)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.35)) { appeared = true }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.35)) { appeared = true }
         }
     }
 
@@ -227,7 +231,7 @@ struct RegisterView: View {
         autocap: TextInputAutocapitalization = .words
     ) -> some View {
         TextField(placeholder, text: text)
-            .font(.system(size: 16))
+            .appFont(size: 16)
             .foregroundColor(ink)
             .keyboardType(keyboard)
             .textInputAutocapitalization(autocap)
@@ -236,17 +240,7 @@ struct RegisterView: View {
             .focused($focusedField, equals: field)
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                    .fill(fieldFill)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                    .stroke(
-                        focusedField == field ? ink.opacity(0.16) : Color.clear,
-                        lineWidth: 1
-                    )
-            )
+            .modifier(AuthFieldSurface(isFocused: focusedField == field))
     }
 
     private func minimalSecureField(
@@ -265,7 +259,7 @@ struct RegisterView: View {
                     SecureField(placeholder, text: text)
                 }
             }
-            .font(.system(size: 16))
+            .appFont(size: 16)
             .foregroundColor(ink)
             .textContentType(.newPassword)
             .focused($focusedField, equals: field)
@@ -281,17 +275,7 @@ struct RegisterView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                .fill(fieldFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                .stroke(
-                    focusedField == field ? ink.opacity(0.16) : Color.clear,
-                    lineWidth: 1
-                )
-        )
+        .modifier(AuthFieldSurface(isFocused: focusedField == field))
     }
 
     // MARK: - Actions

@@ -1,6 +1,7 @@
 import SwiftUI
 import AVKit
 import Combine
+import CryptoKit
 
 struct VideoPlayerScreen: View {
 
@@ -14,6 +15,9 @@ struct VideoPlayerScreen: View {
     var durationLabel: String = "Duration unavailable"
 
     @ObservedObject private var saved = SavedItemsManager.shared
+    @State private var offlineURL: URL?
+    @State private var isDownloading = false
+    @State private var downloadError: String?
     @State private var player: AVPlayer?
     @State private var completed = false
     @State private var hasRecordedPlayback = false
@@ -51,18 +55,10 @@ struct VideoPlayerScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 if remoteLoadFailed {
                     remoteErrorHero
-                } else if let url = videoURL {
+                } else if videoURL != nil {
                     VideoPlayer(player: player)
                         .aspectRatio(16 / 9, contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-                        .onAppear {
-                            if player == nil {
-                                // Authenticated remote media (private buckets) may need headers;
-                                // public Supabase URLs play with a plain AVPlayer.
-                                player = AVPlayer(url: url)
-                                player?.play()
-                            }
-                        }
                 } else {
                     AppEmptyState(icon: "video.slash", title: "Video unavailable", message: "This lesson has no playable video. Please ask your tutor to upload it again.", accent: AppTheme.videos, soft: AppTheme.videosSoft)
                 }
@@ -90,6 +86,30 @@ struct VideoPlayerScreen: View {
                         Text(topic)
                             .appFont(size: 14, weight: .medium)
                             .foregroundColor(AppTheme.muted)
+                    }
+                }
+
+                if isRemoteFile {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if offlineURL != nil {
+                            Label("Available offline", systemImage: "checkmark.circle.fill")
+                                .foregroundColor(AppTheme.brand)
+                                .appFont(size: 14, weight: .semibold)
+                        } else {
+                            Button {
+                                Task { await downloadForOffline() }
+                            } label: {
+                                Label(isDownloading ? "Downloading…" : "Download for offline",
+                                      systemImage: "arrow.down.circle")
+                            }
+                            .buttonStyle(AppSecondaryButtonStyle())
+                            .disabled(isDownloading)
+                        }
+                        if let downloadError {
+                            Text(downloadError)
+                                .appFont(size: 13)
+                                .foregroundColor(AppTheme.danger)
+                        }
                     }
                 }
 
@@ -127,6 +147,7 @@ struct VideoPlayerScreen: View {
                 }
             }
         }
+        .task(id: fileName) { await preparePlayer() }
         .onReceive(player?.currentItem?.publisher(for: \.status).eraseToAnyPublisher()
                    ?? Just(AVPlayerItem.Status.unknown).eraseToAnyPublisher()) { status in
             if status == .failed {
@@ -157,6 +178,38 @@ struct VideoPlayerScreen: View {
         }
     }
 
+    @MainActor
+    private func preparePlayer() async {
+        guard player == nil, let remote = videoURL else { return }
+        let owner = AuthManager.shared.currentUser?.id
+        let local = isRemoteFile
+            ? await VideoDownloadStore.shared.cachedVideo(for: remote, userID: owner)
+            : remote
+        guard !Task.isCancelled, owner == AuthManager.shared.currentUser?.id else { return }
+        offlineURL = local
+        player = AVPlayer(url: local ?? remote)
+        if scenePhase == .active { player?.play() }
+    }
+
+    @MainActor
+    private func downloadForOffline() async {
+        guard !isDownloading, let url = videoURL,
+              let owner = AuthManager.shared.currentUser?.id else { return }
+        isDownloading = true
+        downloadError = nil
+        defer { isDownloading = false }
+        do {
+            let request = SupabaseConfig.isConfigured
+                ? SupabaseClient.shared.documentDownloadRequest(from: url)
+                : URLRequest(url: url)
+            let local = try await VideoDownloadStore.shared.download(request, userID: owner)
+            guard owner == AuthManager.shared.currentUser?.id else { return }
+            offlineURL = local
+        } catch {
+            downloadError = "Download failed. Check your connection and available storage, then try again."
+        }
+    }
+
     private var remoteErrorHero: some View {
         VStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -173,6 +226,7 @@ struct VideoPlayerScreen: View {
             Button("Try again") {
                 player = nil
                 remoteLoadFailed = false
+                Task { await preparePlayer() }
             }
             .font(.headline)
             .frame(minHeight: 44)
@@ -212,5 +266,74 @@ struct VideoPlayerScreen: View {
                 durationLabel: durationLabel
             )
         )
+    }
+}
+
+
+/// Complete video files retained on device, isolated by the owning account.
+actor VideoDownloadStore {
+    static let shared = VideoDownloadStore()
+    private let directory: URL
+    private let session: URLSession
+    private var downloads: [URL: Task<URL, Error>] = [:]
+
+    init(directory: URL? = nil, session: URLSession = .shared) {
+        self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("OfflineVideos", isDirectory: true)
+        self.session = session
+    }
+
+    private func destination(for url: URL, userID: UUID) -> URL {
+        let identity = url.absoluteString + "\naccount:" + userID.uuidString.lowercased()
+        let key = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+        let ext = ["mp4", "mov", "m4v"].contains(url.pathExtension.lowercased()) ? url.pathExtension.lowercased() : "mp4"
+        return directory.appendingPathComponent(key + "." + ext)
+    }
+
+    func cachedVideo(for url: URL, userID: UUID?) async -> URL? {
+        guard let userID else { return nil }
+        let file = destination(for: url, userID: userID)
+        guard FileManager.default.fileExists(atPath: file.path),
+              (try? await AVURLAsset(url: file).load(.isPlayable)) == true else { return nil }
+        return file
+    }
+
+    func download(_ request: URLRequest, userID: UUID) async throws -> URL {
+        guard let url = request.url else { throw URLError(.badURL) }
+        if let local = await cachedVideo(for: url, userID: userID) { return local }
+        let file = destination(for: url, userID: userID)
+        if let existing = downloads[file] { return try await existing.value }
+        let task = Task { try await self.transfer(request, to: file) }
+        downloads[file] = task
+        defer { downloads[file] = nil }
+        return try await task.value
+    }
+
+    private func transfer(_ request: URLRequest, to file: URL) async throws -> URL {
+        let (temporary, response) = try await session.download(for: request)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        // Validate a local media file; streaming playlists are not complete offline videos.
+        let staged = temporary.appendingPathExtension(file.pathExtension)
+        try FileManager.default.moveItem(at: temporary, to: staged)
+        defer { try? FileManager.default.removeItem(at: staged) }
+        guard try await AVURLAsset(url: staged).load(.isPlayable),
+              let size = try FileManager.default.attributesOfItem(atPath: staged.path)[.size] as? NSNumber,
+              size.intValue > 0,
+              !["m3u8", "m3u"].contains(request.url?.pathExtension.lowercased() ?? "") else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var location = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try location.setResourceValues(values)
+        if FileManager.default.fileExists(atPath: file.path) {
+            try FileManager.default.removeItem(at: file)
+        }
+        try FileManager.default.moveItem(at: staged, to: file)
+        return file
     }
 }

@@ -390,3 +390,113 @@ extension View {
         modifier(AppFontModifier(size: size, weight: weight, design: design))
     }
 }
+
+// MARK: - Authentication surfaces
+
+/// Quiet texture and a soft wash of green behind the entry forms.
+struct AuthBackdrop: View {
+    var body: some View {
+        ZStack(alignment: .top) {
+            AppTheme.canvas
+            LinearGradient(
+                colors: [AppTheme.brandSoft, AppTheme.canvas.opacity(0)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+            .frame(height: 480)
+            Canvas { context, size in
+                var dots = Path()
+                for x in stride(from: CGFloat(12), to: size.width, by: 24) {
+                    for y in stride(from: CGFloat(12), to: size.height, by: 24) {
+                        dots.addEllipse(in: CGRect(x: x, y: y, width: 1.5, height: 1.5))
+                    }
+                }
+                context.fill(dots, with: .color(AppTheme.brand.opacity(0.10)))
+            }
+            .frame(height: 320)
+            .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+struct AuthHeading: View {
+    let title: String
+    let icon: String
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: icon)
+                .font(.system(size: 29, weight: .medium))
+                .foregroundColor(.white)
+                .frame(width: 72, height: 72)
+                .background(
+                    LinearGradient(colors: [Color(red: 0.10, green: 0.44, blue: 0.34), AppTheme.brandFillDeep],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+                )
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.24), lineWidth: 1))
+                .shadow(color: AppTheme.brand.opacity(0.18), radius: 16, x: 0, y: 8)
+                .accessibilityHidden(true)
+            Text(title)
+                .appFont(size: 30, weight: .bold, design: .rounded)
+                .foregroundColor(AppTheme.ink)
+                .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct AuthFieldSurface: ViewModifier {
+    let isFocused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .frame(minHeight: 60)
+            .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(isFocused ? AppTheme.brand.opacity(0.65) : AppTheme.brand.opacity(0.12),
+                              lineWidth: isFocused ? 1.5 : 1))
+            .shadow(color: AppTheme.shadow.opacity(isFocused ? 0.65 : 0.3), radius: 8, x: 0, y: 3)
+    }
+}
+
+struct AuthPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .appFont(size: 17, weight: .bold)
+            .multilineTextAlignment(.center)
+            .foregroundColor(isEnabled ? .white : AppTheme.secondaryInk)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 18)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: isEnabled
+                            ? [Color(red: 0.10, green: 0.43, blue: 0.33), AppTheme.brandFillDeep]
+                            : [AppTheme.fill, AppTheme.fill],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(LinearGradient(
+                        colors: [.white.opacity(isEnabled ? 0.35 : 0.08), .white.opacity(0.02)],
+                        startPoint: .top, endPoint: .bottom
+                    ), lineWidth: 1)
+            }
+            .shadow(color: isEnabled ? AppTheme.brand.opacity(0.22) : .clear,
+                    radius: configuration.isPressed ? 3 : 12, x: 0, y: configuration.isPressed ? 2 : 6)
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.9 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+}

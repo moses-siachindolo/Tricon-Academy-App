@@ -4,6 +4,8 @@ import UIKit
 struct LoginView: View {
 
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var email = ""
     @State private var password = ""
@@ -27,14 +29,12 @@ struct LoginView: View {
         case email, password
     }
 
-    // MARK: - Palette (entry green — independent of post-login blue brand)
+    // MARK: - Palette
 
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
     private let mutedIcon = AppTheme.secondaryInk
-    private let fieldFill = AppTheme.field
     private let brand = AppTheme.brand
-    private let brandDeep = AppTheme.brandDeep
     private let danger = AppTheme.danger
 
     private var canSubmit: Bool {
@@ -44,17 +44,13 @@ struct LoginView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                canvas.ignoresSafeArea()
+                AuthBackdrop()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        Text("Welcome back")
-                            .appFont(size: 26, weight: .semibold)
-                            .foregroundColor(ink)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 8)
-                            .padding(.bottom, 20)
+                        AuthHeading(title: "Welcome back", icon: "book.closed.fill")
+                            .padding(.top, 20)
+                            .padding(.bottom, 28)
 
                         VStack(spacing: 14) {
                             minimalField(
@@ -79,12 +75,14 @@ struct LoginView: View {
                                 .foregroundColor(danger)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
+                                .padding(14)
+                                .background(AppTheme.dangerSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .padding(.top, 14)
                         }
 
-                        HStack {
+                        optionsLayout {
                             Button {
-                                withAnimation(.easeOut(duration: 0.15)) { rememberMe.toggle() }
+                                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { rememberMe.toggle() }
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: rememberMe ? "checkmark.circle.fill" : "circle")
@@ -94,10 +92,14 @@ struct LoginView: View {
                                         .appFont(size: 14, weight: .medium)
                                         .foregroundColor(ink)
                                 }
-                            }
+                                }
                             .buttonStyle(SoftPressStyle())
+                            .frame(minHeight: 44)
+                            .accessibilityValue(rememberMe ? "On" : "Off")
 
-                            Spacer()
+                            if !dynamicTypeSize.isAccessibilitySize {
+                                Spacer(minLength: 8)
+                            }
 
                             Button {
                                 resetEmail = email
@@ -110,8 +112,9 @@ struct LoginView: View {
                                 Text("Forgot password?")
                                     .appFont(size: 14, weight: .semibold)
                                     .foregroundColor(brand)
-                                    .underline()
+                                    .frame(minHeight: 44)
                             }
+                            .buttonStyle(SoftPressStyle())
                         }
                         .padding(.top, 18)
 
@@ -121,13 +124,13 @@ struct LoginView: View {
                             ZStack {
                                 if isLoading {
                                     ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: AppTheme.secondaryInk))
                                 } else {
-                                    Text("Log In")
+                                    Label("Log In", systemImage: "arrow.right")
                                 }
                             }
                         }
-                        .buttonStyle(AppPrimaryButtonStyle())
+                        .buttonStyle(AuthPrimaryButtonStyle())
                         .disabled(!canSubmit)
                         .padding(.top, 22)
 
@@ -140,18 +143,22 @@ struct LoginView: View {
                                 Text("Sign Up")
                                     .appFont(size: 15, weight: .bold)
                                     .foregroundColor(brand)
-                                    .underline()
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                                    .background(AppTheme.brandSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             }
+                            .buttonStyle(SoftPressStyle())
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 24)
 
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 24)
+                    .frame(maxWidth: 480)
+                    .frame(maxWidth: .infinity)
                     .frame(minHeight: geo.size.height, alignment: .top)
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 12)
+                    .offset(y: appeared || reduceMotion ? 0 : 12)
                 }
             }
         }
@@ -159,13 +166,20 @@ struct LoginView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(canvas, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .tint(brand)
         .disabled(isLoading)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.35)) { appeared = true }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.35)) { appeared = true }
         }
         .sheet(isPresented: $showResetSheet) {
             resetPasswordSheet
         }
+    }
+
+    private var optionsLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
     }
 
     // MARK: - Password reset
@@ -289,7 +303,7 @@ struct LoginView: View {
         contentType: UITextContentType? = nil
     ) -> some View {
         TextField(placeholder, text: text)
-            .font(.system(size: 16))
+            .appFont(size: 16)
             .foregroundColor(ink)
             .keyboardType(keyboard)
             .textInputAutocapitalization(.never)
@@ -300,17 +314,7 @@ struct LoginView: View {
             .onSubmit { focusedField = .password }
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                    .fill(fieldFill)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                    .stroke(
-                        focusedField == field ? ink.opacity(0.16) : Color.clear,
-                        lineWidth: 1
-                    )
-            )
+            .modifier(AuthFieldSurface(isFocused: focusedField == field))
     }
 
     private func minimalSecureField(
@@ -329,7 +333,7 @@ struct LoginView: View {
                     SecureField(placeholder, text: text)
                 }
             }
-            .font(.system(size: 16))
+            .appFont(size: 16)
             .foregroundColor(ink)
             .textContentType(.password)
             .focused($focusedField, equals: field)
@@ -347,17 +351,7 @@ struct LoginView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                .fill(fieldFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                .stroke(
-                    focusedField == field ? ink.opacity(0.16) : Color.clear,
-                    lineWidth: 1
-                )
-        )
+        .modifier(AuthFieldSurface(isFocused: focusedField == field))
     }
 }
 

@@ -159,7 +159,11 @@ private struct StoredAccount: Codable {
 class AuthManager: ObservableObject {
     static let shared = AuthManager()
 
-    @Published var currentUser: User?
+    @Published var currentUser: User? {
+        didSet {
+            SavedItemsManager.shared.setUser(currentUser?.id)
+        }
+    }
     @Published var isLoggedIn: Bool = false
     @Published private(set) var isCloudEnabled: Bool = SupabaseConfig.isConfigured
     /// True after user opens a password-recovery deep link; show set-new-password UI.
@@ -1354,7 +1358,15 @@ class AuthManager: ObservableObject {
     }
 
     private func restoreSession() async {
-        if client.isConfigured, client.currentSession != nil {
+        if client.isConfigured, let cloudSession = client.currentSession {
+            // Open remembered accounts immediately so downloaded lessons remain reachable
+            // offline. Only restore the profile belonging to this persisted session.
+            if let data = readFromKeychain(key: sessionKeychainKey),
+               let user = try? JSONDecoder().decode(User.self, from: data),
+               user.id == cloudSession.user.id {
+                currentUser = user
+                isLoggedIn = true
+            }
             do {
                 // Access tokens expire (~1h). Refresh before any profile call so cold
                 // launches don't leave the user "logged in" with a dead JWT.
@@ -1388,7 +1400,8 @@ class AuthManager: ObservableObject {
                     return
                 }
                 if let data = readFromKeychain(key: sessionKeychainKey),
-                   let user = try? JSONDecoder().decode(User.self, from: data) {
+                   let user = try? JSONDecoder().decode(User.self, from: data),
+                   user.id == client.currentSession?.user.id {
                     currentUser = user
                     isLoggedIn = true
                 }

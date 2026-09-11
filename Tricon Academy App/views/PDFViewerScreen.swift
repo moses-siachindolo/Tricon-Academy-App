@@ -60,6 +60,13 @@ struct PDFViewerScreen: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .bottomBar) {
+                if loadedDocument != nil {
+                    Label("Available offline", systemImage: "checkmark.circle.fill")
+                        .appFont(size: 12, weight: .medium)
+                        .foregroundColor(AppTheme.brand)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 if !contentId.isEmpty {
                     Button {
@@ -102,7 +109,7 @@ struct PDFViewerScreen: View {
                 Text(isRemoteFile ? "Could not load document" : "Document unavailable")
                     .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
-                Text(isRemoteFile ? "Check your connection and try again." : "This document is missing or unreadable. Please ask your tutor to upload it again.")
+                Text(isRemoteFile ? "This document is not available offline yet. Connect to the internet and try again." : "This document is missing or unreadable. Please ask your tutor to upload it again.")
                     .appFont(size: 13)
                     .foregroundColor(AppTheme.muted)
                     .multilineTextAlignment(.center)
@@ -137,7 +144,7 @@ struct PDFViewerScreen: View {
                 let request = SupabaseConfig.isConfigured
                     ? SupabaseClient.shared.documentDownloadRequest(from: remote)
                     : URLRequest(url: remote)
-                document = try await DocumentDownloadCache.shared.document(for: request)
+                document = try await DocumentDownloadCache.shared.document(for: request, userID: AuthManager.shared.currentUser?.id)
             } else if let url = resolvedURL {
                 document = try await DocumentDownloadCache.shared.localDocument(at: url)
             } else {
@@ -212,12 +219,15 @@ actor DocumentDownloadCache {
     private let directory: URL
     private let session: URLSession
     private var downloads: [String: Task<URL, Error>] = [:]
-    private let lifetime: TimeInterval = 7 * 24 * 60 * 60
-    private let sizeLimit = 250 * 1024 * 1024
+    private let legacyDirectory: URL?
 
     init(directory: URL? = nil, session: URLSession = .shared) {
-        self.directory = directory ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Documents", isDirectory: true)
+        self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("OfflineDocuments", isDirectory: true)
+        self.legacyDirectory = directory == nil
+            ? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Documents", isDirectory: true)
+            : nil
         self.session = session
     }
 
@@ -228,19 +238,27 @@ actor DocumentDownloadCache {
         return document
     }
 
-    func document(for request: URLRequest) async throws -> PDFDocument {
+    func document(for request: URLRequest, userID: UUID? = nil) async throws -> PDFDocument {
         guard let url = request.url else { throw URLError(.badURL) }
-        // Include credentials in the hash so private responses never cross sessions.
-        let identity = url.absoluteString + "\n" + (request.value(forHTTPHeaderField: "Authorization") ?? "")
+        // Stable account identity survives token refreshes without sharing private files.
+        let legacyIdentity = url.absoluteString + "\n" + (request.value(forHTTPHeaderField: "Authorization") ?? "")
             + "\n" + (request.value(forHTTPHeaderField: "apikey") ?? "")
+        let identity = userID.map { url.absoluteString + "\naccount:" + $0.uuidString.lowercased() } ?? legacyIdentity
         let key = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
         let destination = directory.appendingPathComponent(key + ".pdf")
-        if let attributes = try? FileManager.default.attributesOfItem(atPath: destination.path),
-           let created = attributes[.creationDate] as? Date,
-           Date().timeIntervalSince(created) < lifetime,
-           let document = try? localDocument(at: destination) {
-            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: destination.path)
+        if let document = try? localDocument(at: destination) {
             return document
+        }
+        // Only migrate an old cache entry matching these exact credentials.
+        if let legacyDirectory {
+            let legacyKey = SHA256.hash(data: Data(legacyIdentity.utf8)).map { String(format: "%02x", $0) }.joined()
+            let oldFile = legacyDirectory.appendingPathComponent(legacyKey + ".pdf")
+            if let document = try? localDocument(at: oldFile) {
+                try prepareDirectory()
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.default.copyItem(at: oldFile, to: destination)
+                return document
+            }
         }
         if let download = downloads[key] {
             return try localDocument(at: await download.value)
@@ -263,32 +281,19 @@ actor DocumentDownloadCache {
         }
         // Never persist an error page or a corrupt document as a successful download.
         _ = try localDocument(at: temporaryURL)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try prepareDirectory()
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
         try FileManager.default.moveItem(at: temporaryURL, to: destination)
-        prune(excluding: destination)
         return destination
     }
 
-    private func prune(excluding current: URL) {
-        let keys: Set<URLResourceKey> = [.fileSizeKey, .contentModificationDateKey, .creationDateKey]
-        guard let files = try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: Array(keys), options: .skipsHiddenFiles
-        ) else { return }
-        let entries = files.compactMap { url -> (url: URL, size: Int, accessed: Date, created: Date)? in
-            guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
-            return (url, values.fileSize ?? 0, values.contentModificationDate ?? .distantPast,
-                    values.creationDate ?? .distantPast)
-        }.sorted { $0.accessed < $1.accessed }
-        var total = entries.reduce(0) { $0 + $1.size }
-        for entry in entries where entry.url != current {
-            if total > sizeLimit || Date().timeIntervalSince(entry.created) >= lifetime {
-                if (try? FileManager.default.removeItem(at: entry.url)) != nil {
-                    total -= entry.size
-                }
-            }
-        }
+    private func prepareDirectory() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var location = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try location.setResourceValues(values)
     }
 }

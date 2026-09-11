@@ -41,7 +41,23 @@ final class OfflineProtocol: URLProtocol {
         privateRequest.setValue("Bearer different-session", forHTTPHeaderField: "Authorization")
         await expectFailure(cache, privateRequest)
         try FileManager.default.setAttributes([.creationDate: Date(timeIntervalSinceNow: -8 * 86400)], ofItemAtPath: file.path)
-        await expectFailure(cache, request)
+        let old = try await cache.document(for: request)
+        precondition(old.pageCount == 1, "Downloaded PDFs must remain available after seven days")
+        let studentID = UUID()
+        let tutorID = UUID()
+        let accountIdentity = request.url!.absoluteString + "\naccount:" + studentID.uuidString.lowercased()
+        let accountKey = SHA256.hash(data: Data(accountIdentity.utf8)).map { String(format: "%02x", $0) }.joined()
+        let accountFile = directory.appendingPathComponent(accountKey + ".pdf")
+        precondition(pdf.write(to: accountFile))
+        let refreshed = try await cache.document(for: privateRequest, userID: studentID)
+        precondition(refreshed.pageCount == 1, "Token changes must not hide account downloads")
+        let relaunched = try await DocumentDownloadCache(directory: directory, session: session)
+            .document(for: privateRequest, userID: studentID)
+        precondition(relaunched.pageCount == 1)
+        do {
+            _ = try await cache.document(for: privateRequest, userID: tutorID)
+            fatalError("Another account accessed a private download")
+        } catch {}
         try FileManager.default.removeItem(at: file)
         try Data("not a PDF".utf8).write(to: file)
         await expectFailure(cache, request)
@@ -49,7 +65,7 @@ final class OfflineProtocol: URLProtocol {
             _ = try await cache.localDocument(at: file)
             fatalError("Invalid local PDF was accepted")
         } catch {}
-        print("PASS: disk reuse, persistence, session isolation, expiry, corrupt cache and local PDF rejection")
+        print("PASS: disk reuse, persistence, session and account isolation, token refresh, long-term offline access, corrupt cache and local PDF rejection")
     }
 
     static func expectFailure(_ cache: DocumentDownloadCache, _ request: URLRequest) async {

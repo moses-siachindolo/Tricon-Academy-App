@@ -35,17 +35,26 @@ struct SavedItem: Identifiable, Codable, Hashable {
     }
 }
 
-/// Local bookmarks for papers, notes, and videos.
+/// Local, account-specific bookmarks for papers, notes, and videos.
 final class SavedItemsManager: ObservableObject {
     static let shared = SavedItemsManager()
 
     @Published private(set) var items: [SavedItem] = []
 
     private let defaults: UserDefaults
-    private let storageKey = "saved.items.v1"
+    private var userID: UUID?
+    private var storageKey: String? {
+        userID.map { "saved.items.v2.\($0.uuidString.lowercased())" }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    /// Called synchronously by authentication before showing another account's UI.
+    func setUser(_ userID: UUID?) {
+        guard self.userID != userID else { return }
+        self.userID = userID
         load()
     }
 
@@ -106,16 +115,19 @@ final class SavedItemsManager: ObservableObject {
     }
 
     func remove(id: String) {
+        guard userID != nil else { return }
         items.removeAll { $0.id == id }
         persist()
     }
 
     func clearAll() {
+        guard userID != nil else { return }
         items.removeAll()
         persist()
     }
 
     private func toggle(_ item: SavedItem) {
+        guard userID != nil else { return }
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items.remove(at: index)
         } else {
@@ -125,7 +137,10 @@ final class SavedItemsManager: ObservableObject {
     }
 
     private func load() {
-        guard let data = defaults.data(forKey: storageKey),
+        // The old shared key has no owner. Preserve it on disk, but never import
+        // it into an account, where it could expose another user's bookmarks.
+        guard let storageKey,
+              let data = defaults.data(forKey: storageKey),
               let decoded = try? JSONDecoder().decode([SavedItem].self, from: data) else {
             items = []
             return
@@ -134,7 +149,8 @@ final class SavedItemsManager: ObservableObject {
     }
 
     private func persist() {
-        guard let data = try? JSONEncoder().encode(items) else { return }
+        guard let storageKey,
+              let data = try? JSONEncoder().encode(items) else { return }
         defaults.set(data, forKey: storageKey)
     }
 }

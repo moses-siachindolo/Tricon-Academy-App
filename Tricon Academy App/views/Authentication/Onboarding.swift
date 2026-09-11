@@ -6,6 +6,7 @@ import SwiftUI
 /// Soft academic palette, feature-led pages, green brand CTAs.
 struct OnboardingView: View {
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var page = 0
     @State private var appear = false
 
@@ -242,7 +243,24 @@ struct OnboardingView: View {
 
             Spacer()
 
-            if !isLastPage {
+            if page > 0 {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                        page = 0
+                    }
+                } label: {
+                    Label("Back", systemImage: "arrow.left")
+                        .appFont(size: 14, weight: .semibold)
+                        .foregroundColor(brand)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .background(AppTheme.brandSoft, in: Capsule())
+                }
+                .buttonStyle(SoftPressStyle())
+                .accessibilityLabel("Back to first welcome screen")
+            }
+
+            if page == 0 {
                 Button {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                         page = pages.count - 1
