@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct Tricon_Academy_App: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var appSettings = AppSettings.shared
 
@@ -35,10 +36,15 @@ struct Tricon_Academy_App: App {
             .environmentObject(appSettings)
             .preferredColorScheme(appSettings.preferredColorScheme)
             .onAppear {
-                AppChrome.apply(for: appSettings.preferredColorScheme)
+                appSettings.applyGlobally()
             }
             .onChange(of: appSettings.useDarkTheme) { _ in
-                AppChrome.apply(for: appSettings.preferredColorScheme)
+                appSettings.applyGlobally()
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active && authManager.isLoggedIn {
+                    StatsManager.shared.recordAppActive()
+                }
             }
             .onOpenURL { url in
                 authManager.handleOpenURL(url)
@@ -46,6 +52,8 @@ struct Tricon_Academy_App: App {
             .sheet(isPresented: $authManager.needsPasswordResetCompletion) {
                 ResetPasswordConfirmView()
                     .environmentObject(authManager)
+                    .environmentObject(appSettings)
+                    .preferredColorScheme(appSettings.preferredColorScheme)
             }
             .alert(
                 "Reset link",

@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import Combine
 
 struct VideoPlayerScreen: View {
 
@@ -10,13 +11,13 @@ struct VideoPlayerScreen: View {
     var topic: String = ""
     var subjectName: String = ""
     var levelRaw: String = ""
-    var durationLabel: String = "10 min"
+    var durationLabel: String = "Duration unavailable"
 
     @ObservedObject private var saved = SavedItemsManager.shared
     @State private var player: AVPlayer?
-    @State private var lessonProgress: Double = 0
     @State private var completed = false
-    @State private var isPlayingLesson = false
+    @State private var hasRecordedPlayback = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var remoteLoadFailed = false
 
     private var isRemoteFile: Bool {
@@ -48,10 +49,12 @@ struct VideoPlayerScreen: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
-                if let url = videoURL {
-                    VideoPlayer(player: player ?? AVPlayer(url: url))
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                if remoteLoadFailed {
+                    remoteErrorHero
+                } else if let url = videoURL {
+                    VideoPlayer(player: player)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
                         .onAppear {
                             if player == nil {
                                 // Authenticated remote media (private buckets) may need headers;
@@ -60,53 +63,34 @@ struct VideoPlayerScreen: View {
                                 player?.play()
                             }
                         }
-                } else if remoteLoadFailed {
-                    remoteErrorHero
                 } else {
-                    lessonHero
+                    AppEmptyState(icon: "video.slash", title: "Video unavailable", message: "This lesson has no playable video. Please ask your tutor to upload it again.", accent: AppTheme.videos, soft: AppTheme.videosSoft)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(title)
-                        .font(.system(size: 20, weight: .bold))
+                        .appFont(size: 20, weight: .bold)
                         .foregroundColor(AppTheme.ink)
 
-                    HStack(spacing: 8) {
-                        metaChip(icon: "book.fill", text: subjectName.isEmpty ? "Lesson" : subjectName)
-                        metaChip(icon: "graduationcap.fill", text: levelRaw.isEmpty ? "All levels" : levelRaw)
-                        metaChip(icon: "clock.fill", text: durationLabel)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) {
+                            metaChip(icon: "book.fill", text: subjectName.isEmpty ? "Lesson" : subjectName)
+                            metaChip(icon: "graduationcap.fill", text: levelRaw.isEmpty ? "All levels" : levelRaw)
+                            metaChip(icon: "clock.fill", text: durationLabel)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            metaChip(icon: "book.fill", text: subjectName.isEmpty ? "Lesson" : subjectName)
+                            metaChip(icon: "graduationcap.fill", text: levelRaw.isEmpty ? "All levels" : levelRaw)
+                            metaChip(icon: "clock.fill", text: durationLabel)
+                        }
                     }
 
                     if !topic.isEmpty {
                         Text(topic)
-                            .font(.system(size: 14, weight: .medium))
+                            .appFont(size: 14, weight: .medium)
                             .foregroundColor(AppTheme.muted)
                     }
-                }
-
-                // Lesson outline (always useful, even with real video)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Lesson outline")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(AppTheme.ink)
-
-                    outlineRow(number: "1", title: "Introduction", detail: "Context and learning goals")
-                    outlineRow(number: "2", title: "Core concepts", detail: "Main ideas explained clearly")
-                    outlineRow(number: "3", title: "Worked examples", detail: "Step-by-step practice")
-                    outlineRow(number: "4", title: "Exam tips", detail: "Common mistakes and scoring")
-                }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(AppTheme.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(AppTheme.brand.opacity(0.10), lineWidth: 1)
-                )
-
-                if videoURL == nil {
-                    interactiveLessonCard
                 }
 
                 if completed {
@@ -114,13 +98,13 @@ struct VideoPlayerScreen: View {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(AppTheme.brand)
                         Text("Lesson marked complete")
-                            .font(.system(size: 14, weight: .semibold))
+                            .appFont(size: 14, weight: .semibold)
                             .foregroundColor(AppTheme.brandDeep)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(14)
                     .background(AppTheme.brandSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
                 }
             }
             .padding(.horizontal, AppTheme.horizontalPadding)
@@ -136,119 +120,68 @@ struct VideoPlayerScreen: View {
                     Button {
                         toggleBookmark()
                     } label: {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .foregroundColor(isBookmarked ? AppTheme.bookmark : AppTheme.brandDeep)
+                        AppIconLabel(systemName: isBookmarked ? "bookmark.fill" : "bookmark",
+                                     tint: isBookmarked ? AppTheme.bookmark : AppTheme.brandDeep)
                     }
+                    .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Save lesson")
                 }
             }
         }
-        .onAppear {
+        .onReceive(player?.currentItem?.publisher(for: \.status).eraseToAnyPublisher()
+                   ?? Just(AVPlayerItem.Status.unknown).eraseToAnyPublisher()) { status in
+            if status == .failed {
+                player?.pause()
+                remoteLoadFailed = true
+            }
+        }
+        .onReceive(player?.publisher(for: \.timeControlStatus).eraseToAnyPublisher()
+                   ?? Just(AVPlayer.TimeControlStatus.paused).eraseToAnyPublisher()) { status in
+            guard status == .playing, !hasRecordedPlayback else { return }
+            hasRecordedPlayback = true
             StatsManager.shared.recordVideoWatched()
+            StatsManager.shared.recordResourceOpened(
+                id: contentId, subject: subjectName, title: title,
+                kind: .video, levelRaw: levelRaw
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { notification in
+            guard let item = notification.object as? AVPlayerItem,
+                  item === player?.currentItem else { return }
+            completed = true
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase != .active { player?.pause() }
         }
         .onDisappear {
             player?.pause()
         }
     }
 
-    private var lessonHero: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.52, green: 0.32, blue: 0.88),
-                            Color(red: 0.28, green: 0.18, blue: 0.55)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(height: 200)
-                .shadow(color: Color(red: 0.52, green: 0.32, blue: 0.88).opacity(0.28), radius: 16, x: 0, y: 8)
-
-            VStack(spacing: 12) {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundColor(.white)
-                Text("Interactive lesson")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                Text("Video file not available — complete the guided lesson below.")
-                    .font(.system(size: 12.5))
-                    .foregroundColor(.white.opacity(0.85))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-        }
-    }
-
     private var remoteErrorHero: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.danger.opacity(0.12))
-                .frame(height: 160)
-            VStack(spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(AppTheme.danger)
-                Text("Could not load video")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.ink)
-                Text("Check your connection or Storage bucket permissions.")
-                    .font(.system(size: 12.5))
-                    .foregroundColor(AppTheme.muted)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-            }
-        }
-    }
-
-    private var interactiveLessonCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Guided practice")
-                .font(.system(size: 16, weight: .bold))
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 28))
+                .foregroundColor(AppTheme.danger)
+            Text("Could not load video")
+                .appFont(size: 15, weight: .semibold)
                 .foregroundColor(AppTheme.ink)
-
-            ProgressView(value: lessonProgress)
-                .tint(AppTheme.brand)
-
-            Text(isPlayingLesson ? "Working through the lesson…" : "Start the guided session to build your streak.")
-                .font(.system(size: 13))
+            Text("Check your connection and try again.")
+                .appFont(size: 12.5)
                 .foregroundColor(AppTheme.muted)
-
-            Button {
-                runGuidedLesson()
-            } label: {
-                HStack {
-                    Image(systemName: completed ? "arrow.clockwise" : "play.fill")
-                    Text(completed ? "Replay lesson" : (isPlayingLesson ? "In progress…" : "Start lesson"))
-                        .fontWeight(.semibold)
-                }
-                .font(.system(size: 15))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(
-                    LinearGradient(
-                        colors: [AppTheme.brand, AppTheme.brandDeep],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+            Button("Try again") {
+                player = nil
+                remoteLoadFailed = false
             }
-            .disabled(isPlayingLesson)
-            .buttonStyle(.plain)
+            .font(.headline)
+            .frame(minHeight: 44)
+            .tint(AppTheme.brandBright)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(AppTheme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(AppTheme.brand.opacity(0.10), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity)
+        .padding(20)
+        .background(AppTheme.danger.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
     }
 
     private func metaChip(icon: String, text: String) -> some View {
@@ -256,50 +189,12 @@ struct VideoPlayerScreen: View {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .bold))
             Text(text)
-                .font(.system(size: 11.5, weight: .semibold))
+                .appFont(size: 11.5, weight: .semibold)
         }
         .foregroundColor(AppTheme.brandDeep)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Capsule().fill(AppTheme.brandSoft))
-    }
-
-    private func outlineRow(number: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(number)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(AppTheme.brand))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppTheme.ink)
-                Text(detail)
-                    .font(.system(size: 12.5))
-                    .foregroundColor(AppTheme.muted)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func runGuidedLesson() {
-        isPlayingLesson = true
-        completed = false
-        lessonProgress = 0
-        let steps = 8
-        for i in 1...steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.35) {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    lessonProgress = Double(i) / Double(steps)
-                }
-                if i == steps {
-                    isPlayingLesson = false
-                    completed = true
-                }
-            }
-        }
     }
 
     private func toggleBookmark() {

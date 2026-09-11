@@ -187,90 +187,84 @@ struct VideoLesson: Identifiable, Codable, Hashable {
 /// Primary text (`ink`) and secondary text (`muted`) are tuned for ≥4.5:1 contrast on `canvas` / `card`.
 enum AppTheme {
 
-    // MARK: Brand
+    // MARK: Brand (one academic forest teal — login through classroom)
 
-    /// Core brand green — safe on white buttons and light cards.
-    static let brand = Color(red: 0.07, green: 0.58, blue: 0.36)
+    /// Core brand — deep forest teal. Reads as growth / academy, not generic iOS blue.
+    static let brand = Color(red: 0.05, green: 0.42, blue: 0.31)
+    /// Solid fill endpoint: stays dark enough for white labels in both appearances.
+    static let brandFillDeep = Color(red: 0.03, green: 0.28, blue: 0.21)
     /// Brighter brand for fills in dark mode (icons, selected chips).
     static let brandBright = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.38, green: 0.88, blue: 0.62, alpha: 1)
-            : UIColor(red: 0.07, green: 0.58, blue: 0.36, alpha: 1)
+            ? UIColor(red: 0.38, green: 0.86, blue: 0.64, alpha: 1)
+            : UIColor(red: 0.05, green: 0.42, blue: 0.31, alpha: 1)
     })
     /// High-contrast brand text/icons on soft brand surfaces.
     static let brandDeep = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.55, green: 0.95, blue: 0.72, alpha: 1)
-            : UIColor(red: 0.04, green: 0.38, blue: 0.24, alpha: 1)
+            ? UIColor(red: 0.52, green: 0.90, blue: 0.72, alpha: 1)
+            : UIColor(red: 0.03, green: 0.28, blue: 0.21, alpha: 1)
     })
     static let brandSoft = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.10, green: 0.20, blue: 0.15, alpha: 1)
-            : UIColor(red: 0.86, green: 0.96, blue: 0.90, alpha: 1)
+            ? UIColor(red: 0.08, green: 0.18, blue: 0.14, alpha: 1)
+            : UIColor(red: 0.88, green: 0.95, blue: 0.91, alpha: 1)
+    })
+    /// Classroom icon/heading green — stronger than brand so it holds up in bright light.
+    static let iconGreen = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.48, green: 0.86, blue: 0.68, alpha: 1)
+            : UIColor(red: 0.02, green: 0.22, blue: 0.16, alpha: 1)
+    })
+    /// Darker secondary copy for captions and metadata.
+    static let secondaryInk = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.82, green: 0.85, blue: 0.84, alpha: 1)
+            : UIColor(red: 0.20, green: 0.24, blue: 0.25, alpha: 1)
+    })
+    /// Icon well on white cards.
+    static let iconWell = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.10, green: 0.20, blue: 0.16, alpha: 1)
+            : UIColor(red: 0.80, green: 0.90, blue: 0.85, alpha: 1)
+    })
+    /// Card outline that stays visible at high brightness.
+    static let cardLine = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.22)
+            : UIColor(red: 0.06, green: 0.22, blue: 0.17, alpha: 0.12)
     })
     /// Text / icons on solid brand fills (always white for max contrast).
     static let onBrand = Color.white
 
-    // MARK: Surfaces
+    /// Legacy aliases — same as brand so entry and post-login stay unified.
+    static let entryGreen = brand
+    static let entryGreenDeep = Color(red: 0.03, green: 0.28, blue: 0.21)
+
+    // MARK: Surfaces (semantic — follow Light/Dark from AppSettings)
 
     /// Main app background.
-    static let canvas = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.04, green: 0.045, blue: 0.05, alpha: 1)
-            : UIColor(red: 0.955, green: 0.962, blue: 0.968, alpha: 1)
-    })
+    static let canvas = Color(UIColor.systemGroupedBackground)
     /// Elevated cards / sheets.
-    static let card = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.11, green: 0.12, blue: 0.13, alpha: 1)
-            : UIColor.white
-    })
+    static let card = Color(UIColor.secondarySystemGroupedBackground)
     /// Nested fields inside cards.
-    static let field = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.16, green: 0.17, blue: 0.18, alpha: 1)
-            : UIColor(red: 0.945, green: 0.950, blue: 0.958, alpha: 1)
-    })
+    static let field = Color(UIColor.tertiarySystemBackground)
     /// Subtle fill for chips / secondary controls.
-    static let fill = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor.white.withAlphaComponent(0.08)
-            : UIColor.black.withAlphaComponent(0.05)
-    })
+    static let fill = Color(UIColor.tertiarySystemFill)
 
-    // MARK: Text (high contrast)
+    // MARK: Text (semantic)
 
-    /// Primary body / titles — near black / near white.
-    static let ink = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.98, green: 0.985, blue: 0.99, alpha: 1)
-            : UIColor(red: 0.04, green: 0.06, blue: 0.07, alpha: 1)
-    })
-    /// Secondary labels — still readable at full brightness (darker than typical “gray”).
-    static let muted = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.72, green: 0.75, blue: 0.74, alpha: 1)
-            : UIColor(red: 0.30, green: 0.34, blue: 0.36, alpha: 1)
-    })
-    /// Tertiary / chevrons — never pure light-gray on white.
-    static let subtle = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.55, green: 0.58, blue: 0.58, alpha: 1)
-            : UIColor(red: 0.42, green: 0.46, blue: 0.48, alpha: 1)
-    })
+    /// Primary body / titles.
+    static let ink = Color.primary
+    /// Secondary labels.
+    static let muted = Color.secondary
+    /// Tertiary / chevrons.
+    static let subtle = Color(UIColor.tertiaryLabel)
 
     // MARK: Borders & feedback
 
-    static let stroke = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor.white.withAlphaComponent(0.14)
-            : UIColor.black.withAlphaComponent(0.10)
-    })
-    static let strokeStrong = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor.white.withAlphaComponent(0.22)
-            : UIColor.black.withAlphaComponent(0.14)
-    })
+    static let stroke = Color(UIColor.separator)
+    static let strokeStrong = Color(UIColor.opaqueSeparator)
     static let danger = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 1.0, green: 0.42, blue: 0.40, alpha: 1)
@@ -280,6 +274,11 @@ enum AppTheme {
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.28, green: 0.10, blue: 0.10, alpha: 1)
             : UIColor(red: 0.98, green: 0.92, blue: 0.92, alpha: 1)
+    })
+    static let warning = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 0.72, blue: 0.40, alpha: 1)
+            : UIColor(red: 0.58, green: 0.31, blue: 0.05, alpha: 1)
     })
     static let success = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -335,8 +334,43 @@ enum AppTheme {
             : UIColor(red: 0.99, green: 0.94, blue: 0.84, alpha: 1)
     })
 
+    // MARK: Auth aliases (same as brand blue — used by verification screens)
+
+    static let authBlue = brand
+    static let authBlueDeep = brandDeep
+    static let authBlueSoft = brandSoft
+
+    /// Soft top wash used on subject grids / post-login screens.
+    static var authBlueWash: some View {
+        ZStack {
+            canvas.ignoresSafeArea()
+            LinearGradient(
+                colors: [brandSoft.opacity(0.85), canvas, canvas],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
+    }
+
+    /// Classroom wash used on Home, Browse, subject hubs, and Library.
+    static var classroomWash: some View {
+        ZStack {
+            canvas.ignoresSafeArea()
+            LinearGradient(
+                colors: [brandSoft.opacity(0.38), canvas, canvas],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        }
+    }
+
     // MARK: Layout
 
+    static let iconRadius: CGFloat = 12
+    static let heroRadius: CGFloat = 24
+    static let minimumTapTarget: CGFloat = 44
     static let horizontalPadding: CGFloat = 20
     static let cardRadius: CGFloat = 18
     static let controlRadius: CGFloat = 14

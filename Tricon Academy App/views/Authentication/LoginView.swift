@@ -18,6 +18,7 @@ struct LoginView: View {
     @State private var resetConfirm = ""
     @State private var resetMessage: String?
     @State private var resetSucceeded = false
+    @State private var isResetting = false
     @State private var appeared = false
 
     @FocusState private var focusedField: Field?
@@ -26,15 +27,15 @@ struct LoginView: View {
         case email, password
     }
 
-    // MARK: - Palette
+    // MARK: - Palette (entry green — independent of post-login blue brand)
 
-    private let canvas = Color.white
-    private let ink = Color.black
-    private let mutedIcon = Color(red: 0.45, green: 0.45, blue: 0.48)
-    private let fieldFill = Color(red: 0.965, green: 0.965, blue: 0.97)
+    private let canvas = AppTheme.canvas
+    private let ink = AppTheme.ink
+    private let mutedIcon = AppTheme.secondaryInk
+    private let fieldFill = AppTheme.field
     private let brand = AppTheme.brand
-    private let brandDeep = Color(red: 0.04, green: 0.36, blue: 0.26)
-    private let danger = Color(red: 0.85, green: 0.22, blue: 0.20)
+    private let brandDeep = AppTheme.brandDeep
+    private let danger = AppTheme.danger
 
     private var canSubmit: Bool {
         !email.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty && !isLoading
@@ -47,13 +48,13 @@ struct LoginView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        Text("Log in to your\naccount")
-                            .font(.system(size: 34, weight: .bold))
+                        Text("Welcome back")
+                            .appFont(size: 26, weight: .semibold)
                             .foregroundColor(ink)
                             .multilineTextAlignment(.center)
-                            .lineSpacing(2)
-                            .padding(.top, 24)
-                            .padding(.bottom, 36)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
+                            .padding(.bottom, 20)
 
                         VStack(spacing: 14) {
                             minimalField(
@@ -74,7 +75,7 @@ struct LoginView: View {
 
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.system(size: 13.5, weight: .medium))
+                                .appFont(size: 13.5, weight: .medium)
                                 .foregroundColor(danger)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
@@ -90,11 +91,11 @@ struct LoginView: View {
                                         .font(.system(size: 18))
                                         .foregroundColor(rememberMe ? brand : mutedIcon)
                                     Text("Remember me")
-                                        .font(.system(size: 14, weight: .medium))
+                                        .appFont(size: 14, weight: .medium)
                                         .foregroundColor(ink)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SoftPressStyle())
 
                             Spacer()
 
@@ -107,7 +108,7 @@ struct LoginView: View {
                                 showResetSheet = true
                             } label: {
                                 Text("Forgot password?")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .appFont(size: 14, weight: .semibold)
                                     .foregroundColor(brand)
                                     .underline()
                             }
@@ -123,43 +124,29 @@ struct LoginView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
                                     Text("Log In")
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundColor(.white)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                LinearGradient(
-                                    colors: canSubmit
-                                        ? [brand, brandDeep]
-                                        : [brand.opacity(0.55), brandDeep.opacity(0.55)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(Capsule())
-                            .shadow(color: canSubmit ? brand.opacity(0.35) : .clear, radius: 12, x: 0, y: 6)
                         }
-                        .buttonStyle(AuthPressStyle())
+                        .buttonStyle(AppPrimaryButtonStyle())
                         .disabled(!canSubmit)
-                        .padding(.top, 28)
+                        .padding(.top, 22)
 
                         VStack(spacing: 6) {
                             Text("Don’t have an account?")
-                                .font(.system(size: 15))
+                                .appFont(size: 15)
                                 .foregroundColor(ink)
 
                             NavigationLink(destination: RegisterView()) {
                                 Text("Sign Up")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .appFont(size: 15, weight: .bold)
                                     .foregroundColor(brand)
                                     .underline()
                             }
                         }
-                        .padding(.top, 28)
+                        .padding(.top, 20)
+                        .padding(.bottom, 24)
 
-                        Spacer(minLength: 40)
+                        Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 28)
                     .frame(minHeight: geo.size.height, alignment: .top)
@@ -170,6 +157,8 @@ struct LoginView: View {
         }
         .background(canvas.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(canvas, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .disabled(isLoading)
         .onAppear {
             withAnimation(.easeOut(duration: 0.35)) { appeared = true }
@@ -187,7 +176,7 @@ struct LoginView: View {
                 Section {
                     Text(
                         authManager.isCloudEnabled
-                            ? "Enter your account email. We’ll email a reset link that opens Tricon Academy so you can set a new password (not a blank localhost page)."
+                            ? "Enter your account email. We’ll email a reset link that opens Tricon Academy so you can set a new password."
                             : "Enter the email for your account on this device and choose a new password (min. 6 characters)."
                     )
                     .font(.footnote)
@@ -214,58 +203,52 @@ struct LoginView: View {
                 }
 
                 Section {
-                    Button(authManager.isCloudEnabled ? "Send reset email" : "Reset password") {
+                    Button(isResetting ? "Please wait…" : (authManager.isCloudEnabled ? "Send reset email" : "Reset password")) {
                         handleResetPassword()
                     }
                     .disabled(
-                        resetEmail.trimmingCharacters(in: .whitespaces).isEmpty
+                        isResetting || resetSucceeded || resetEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || (!authManager.isCloudEnabled
                                 && (resetPassword.count < 6 || resetPassword != resetConfirm))
                     )
                 }
             }
+            .disabled(isResetting)
+            .interactiveDismissDisabled(isResetting)
             .navigationTitle("Reset password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { showResetSheet = false }
+                        .disabled(isResetting)
                 }
             }
         }
     }
 
     private func handleResetPassword() {
-        if authManager.isCloudEnabled {
-            Task {
-                let result = await authManager.resetPassword(email: resetEmail, newPassword: resetPassword)
-                await MainActor.run {
-                    switch result {
-                    case .success:
-                        resetSucceeded = true
-                        resetMessage = "Check your email. Open the link on this iPhone — it will return you to Tricon Academy to set a new password."
-                    case .failure(let error):
-                        resetSucceeded = false
-                        resetMessage = error.errorDescription
-                    }
-                }
-            }
-            return
-        }
-
-        guard resetPassword == resetConfirm else {
+        guard !isResetting else { return }
+        guard authManager.isCloudEnabled || resetPassword == resetConfirm else {
             resetSucceeded = false
             resetMessage = "Passwords do not match."
             return
         }
+        isResetting = true
+        resetMessage = nil
         Task {
             let result = await authManager.resetPassword(email: resetEmail, newPassword: resetPassword)
             await MainActor.run {
+                isResetting = false
                 switch result {
                 case .success:
                     resetSucceeded = true
-                    resetMessage = "Password updated. You can log in with your new password."
-                    email = resetEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                    password = resetPassword
+                    if authManager.isCloudEnabled {
+                        resetMessage = "Check your email. Open the link on this iPhone to set a new password."
+                    } else {
+                        resetMessage = "Password updated. You can log in with your new password."
+                        email = resetEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                        password = resetPassword
+                    }
                 case .failure(let error):
                     resetSucceeded = false
                     resetMessage = error.errorDescription
@@ -277,6 +260,8 @@ struct LoginView: View {
     // MARK: - Actions
 
     private func handleLogin() {
+        guard canSubmit else { return }
+        focusedField = nil
         errorMessage = nil
         isLoading = true
 
@@ -311,14 +296,16 @@ struct LoginView: View {
             .disableAutocorrection(true)
             .textContentType(contentType)
             .focused($focusedField, equals: field)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .password }
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(fieldFill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .stroke(
                         focusedField == field ? ink.opacity(0.16) : Color.clear,
                         lineWidth: 1
@@ -346,24 +333,26 @@ struct LoginView: View {
             .foregroundColor(ink)
             .textContentType(.password)
             .focused($focusedField, equals: field)
+            .submitLabel(.go)
+            .onSubmit { handleLogin() }
 
             Button {
                 isVisible.wrappedValue.toggle()
             } label: {
-                Image(systemName: isVisible.wrappedValue ? "eye.slash" : "eye")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(mutedIcon)
+                AppIconLabel(systemName: isVisible.wrappedValue ? "eye.slash" : "eye",
+                             tint: AppTheme.secondaryInk, fill: AppTheme.fill)
             }
+            .buttonStyle(SoftPressStyle())
             .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(fieldFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .stroke(
                     focusedField == field ? ink.opacity(0.16) : Color.clear,
                     lineWidth: 1

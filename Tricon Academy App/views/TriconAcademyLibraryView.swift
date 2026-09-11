@@ -15,10 +15,13 @@ struct TriconAcademyLibraryView: View {
     @ObservedObject private var authManager = AuthManager.shared
     @State private var showUploadBook = false
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var columns: [GridItem] {
+        dynamicTypeSize.isAccessibilitySize
+            ? [GridItem(.flexible())]
+            : [GridItem(.adaptive(minimum: 145), spacing: 10)]
+    }
 
     private struct Folder: Identifiable, Hashable {
         let category: LibraryCategory
@@ -41,14 +44,14 @@ struct TriconAcademyLibraryView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Tricon Academy Library")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .appFont(size: 22, weight: .bold, design: .rounded)
                         .foregroundColor(AppTheme.ink)
                     Text("Books beyond the curriculum — tech, science, business, and stories.")
-                        .font(.system(size: 13.5))
-                        .foregroundColor(AppTheme.muted)
+                        .appFont(size: 13.5)
+                        .foregroundColor(AppTheme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
@@ -65,36 +68,44 @@ struct TriconAcademyLibraryView: View {
                         )
                         .font(.system(size: 14, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(AppTheme.brandSoft)
-                        .foregroundColor(AppTheme.brandDeep)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(height: 48)
+                        .background(AppTheme.iconWell)
+                        .foregroundColor(AppTheme.iconGreen)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                                .stroke(AppTheme.cardLine, lineWidth: 1)
+                        )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SoftPressStyle())
                     .padding(.horizontal, AppTheme.horizontalPadding)
                 }
+
+                LibrarySyncStatusView(store: bookStore)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
 
                 if folders.allSatisfy({ $0.count == 0 }) {
                     emptyLibraryBanner
                         .padding(.horizontal, AppTheme.horizontalPadding)
                 } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(folders) { folder in
                             NavigationLink {
                                 LibraryCategoryView(category: folder.category)
                             } label: {
                                 libraryFolderCard(folder.category, count: folder.count)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SoftPressStyle())
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
                 }
             }
             .padding(.top, 12)
-            .padding(.bottom, 28)
+            .padding(.bottom, 32)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .refreshable { await bookStore.refreshFromCloud() }
+        .background(AppTheme.classroomWash)
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -110,79 +121,75 @@ struct TriconAcademyLibraryView: View {
 
     private var emptyLibraryBanner: some View {
         VStack(spacing: 8) {
-            Image(systemName: "books.vertical")
+            Image(systemName: "books.vertical.fill")
                 .font(.system(size: 28, weight: .medium))
-                .foregroundColor(AppTheme.brandDeep.opacity(0.7))
+                .foregroundColor(AppTheme.iconGreen)
+                .symbolRenderingMode(.monochrome)
             Text("Library is empty")
-                .font(.system(size: 15, weight: .semibold))
+                .appFont(size: 15, weight: .semibold)
                 .foregroundColor(AppTheme.ink)
             Text("Sample titles will appear here when available.")
-                .font(.system(size: 13))
-                .foregroundColor(AppTheme.muted)
+                .appFont(size: 13)
+                .foregroundColor(AppTheme.secondaryInk)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 36)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(AppTheme.cardLine, lineWidth: 1)
         )
     }
 
     /// Pure layout. The count is passed in — this function never reads the catalogue,
     /// so it cannot participate in a data-loading call cycle.
     private func libraryFolderCard(_ category: LibraryCategory, count: Int) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(category.accent.opacity(0.12))
-                    .frame(width: 48, height: 48)
-                Image(systemName: category.icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(category.accent)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: category.icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.iconGreen)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 36, height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(AppTheme.iconWell)
+                )
+                .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(category.rawValue)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.ink)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+            Text(category.rawValue)
+                .appFont(size: 15, weight: .semibold)
+                .foregroundColor(AppTheme.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
 
-                Text(category.blurb)
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundColor(AppTheme.muted)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(category.blurb)
+                .appFont(size: 11.5, weight: .medium)
+                .foregroundColor(AppTheme.secondaryInk)
+                .lineLimit(2)
 
-            Spacer(minLength: 0)
-
-            HStack {
-                Text("\(count) books")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(category.accent)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppTheme.subtle)
-            }
+            Text(count == 1 ? "1 book" : "\(count) books")
+                .appFont(size: 12, weight: .medium)
+                .foregroundColor(AppTheme.secondaryInk)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 176, alignment: .topLeading)
+        .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(AppTheme.cardLine, lineWidth: 1)
         )
-        .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(category.rawValue). \(category.blurb). \(count) books.")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens this library folder")
     }
 }
 
@@ -220,21 +227,49 @@ struct LibraryCategoryView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(category.rawValue)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(AppTheme.ink)
-                    Text(category.blurb)
-                        .font(.system(size: 13.5))
-                        .foregroundColor(AppTheme.muted)
+                HStack(spacing: 14) {
+                    Image(systemName: category.icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(AppTheme.iconGreen)
+                        .symbolRenderingMode(.monochrome)
+                        .frame(width: 52, height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                                .fill(AppTheme.iconWell)
+                        )
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(category.rawValue)
+                            .appFont(size: 20, weight: .bold, design: .rounded)
+                            .foregroundColor(AppTheme.ink)
+                            .lineLimit(1)
+                        Text(category.blurb)
+                            .appFont(size: 13.5)
+                            .foregroundColor(AppTheme.secondaryInk)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
                 }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(AppTheme.cardLine, lineWidth: 1)
+                )
                 .padding(.horizontal, AppTheme.horizontalPadding)
+
+                LibrarySyncStatusView(store: bookStore)
+                    .padding(.horizontal, AppTheme.horizontalPadding)
 
                 if books.isEmpty {
                     emptyState
                         .padding(.horizontal, AppTheme.horizontalPadding)
                 } else {
-                    LazyVStack(spacing: 10) {
+                    LazyVStack(spacing: 12) {
                         ForEach(books) { book in
                             NavigationLink {
                                 LibraryBookDetailView(
@@ -244,16 +279,17 @@ struct LibraryCategoryView: View {
                             } label: {
                                 bookRow(book)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SoftPressStyle())
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
                 }
             }
             .padding(.top, 12)
-            .padding(.bottom, 28)
+            .padding(.bottom, 32)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .refreshable { await bookStore.refreshFromCloud() }
+        .background(AppTheme.classroomWash)
         .navigationTitle(category.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -264,28 +300,29 @@ struct LibraryCategoryView: View {
     /// Shown only when a category has no books — an empty shelf instead of a crash.
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Image(systemName: "books.vertical")
+            Image(systemName: "books.vertical.fill")
                 .font(.system(size: 26, weight: .medium))
-                .foregroundColor(category.accent.opacity(0.7))
+                .foregroundColor(AppTheme.iconGreen)
+                .symbolRenderingMode(.monochrome)
             Text("No books here yet")
-                .font(.system(size: 15, weight: .semibold))
+                .appFont(size: 15, weight: .semibold)
                 .foregroundColor(AppTheme.ink)
             Text("New titles are added regularly. Please check back soon.")
-                .font(.system(size: 13))
-                .foregroundColor(AppTheme.muted)
+                .appFont(size: 13)
+                .foregroundColor(AppTheme.secondaryInk)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
+        .padding(.vertical, 36)
         .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(AppTheme.cardLine, lineWidth: 1)
         )
         .onAppear {
             libraryViewLog.error("Academy Library category \(category.rawValue, privacy: .public) has no books.")
@@ -293,45 +330,51 @@ struct LibraryCategoryView: View {
     }
 
     private func bookRow(_ book: LibraryBook) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(category.accent.opacity(0.14))
-                    .frame(width: 52, height: 68)
-                Image(systemName: "book.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(category.accent)
-            }
+        HStack(spacing: 12) {
+            Image(systemName: "book.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(AppTheme.iconGreen)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 46, height: 58)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(AppTheme.iconWell)
+                )
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(book.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
                 Text(book.author)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(AppTheme.muted)
+                    .appFont(size: 13, weight: .medium)
+                    .foregroundColor(AppTheme.secondaryInk)
                 Text("\(book.audience) · \(book.pages) pages")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(AppTheme.muted.opacity(0.9))
+                    .appFont(size: 12, weight: .medium)
+                    .foregroundColor(AppTheme.secondaryInk)
             }
 
             Spacer(minLength: 6)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.subtle)
+                .foregroundColor(AppTheme.secondaryInk)
         }
-        .padding(14)
+        .padding(16)
+        .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(AppTheme.cardLine, lineWidth: 1)
         )
-        .shadow(color: AppTheme.shadow, radius: 6, x: 0, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(book.title), \(book.author), \(book.audience), \(book.pages) pages")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -351,37 +394,52 @@ struct LibraryBookDetailView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(book.category.accent.opacity(0.14))
-                            .frame(width: 88, height: 118)
-                        Image(systemName: "book.fill")
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundColor(book.category.accent)
-                    }
+                    Image(systemName: "book.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundColor(AppTheme.iconGreen)
+                        .symbolRenderingMode(.monochrome)
+                        .frame(width: 88, height: 118)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                                .fill(AppTheme.iconWell)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                                .stroke(AppTheme.cardLine, lineWidth: 1)
+                        )
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text(book.title)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .appFont(size: 20, weight: .bold, design: .rounded)
                             .foregroundColor(AppTheme.ink)
                         Text(book.author)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(AppTheme.muted)
+                            .appFont(size: 15, weight: .medium)
+                            .foregroundColor(AppTheme.secondaryInk)
                         Text(book.category.rawValue)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(book.category.accent)
+                            .appFont(size: 12, weight: .semibold)
+                            .foregroundColor(AppTheme.iconGreen)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Capsule().fill(book.category.accent.opacity(0.12)))
+                            .background(Capsule().fill(AppTheme.iconWell))
                     }
                     .padding(.top, 4)
                 }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(AppTheme.cardLine, lineWidth: 1)
+                )
 
                 HStack(spacing: 10) {
                     metaChip(icon: "person.fill", text: book.audience)
-                    metaChip(icon: "doc.text", text: "\(book.pages) pages")
+                    metaChip(icon: "doc.text.fill", text: "\(book.pages) pages")
                 }
 
                 if hasReadableFile, let filePath {
@@ -398,37 +456,36 @@ struct LibraryBookDetailView: View {
                     } label: {
                         Label("Open PDF", systemImage: "doc.richtext.fill")
                             .font(.system(size: 15, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(
-                                LinearGradient(
-                                    colors: [AppTheme.brand, AppTheme.brandDeep],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AppPrimaryButtonStyle())
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("About this book")
-                        .font(.system(size: 16, weight: .bold))
+                        .appFont(size: 16, weight: .bold)
                         .foregroundColor(AppTheme.ink)
                     Text(book.summary.isEmpty ? "No summary provided." : book.summary)
-                        .font(.system(size: 15))
-                        .foregroundColor(AppTheme.muted)
+                        .appFont(size: 15)
+                        .foregroundColor(AppTheme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .lineSpacing(3)
                 }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(AppTheme.cardLine, lineWidth: 1)
+                )
             }
             .padding(.horizontal, AppTheme.horizontalPadding)
             .padding(.top, 12)
             .padding(.bottom, 32)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .background(AppTheme.classroomWash)
         .navigationTitle("Book")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -437,14 +494,16 @@ struct LibraryBookDetailView: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
             Text(text)
-                .font(.system(size: 12.5, weight: .medium))
+                .appFont(size: 12.5, weight: .medium)
         }
-        .foregroundColor(AppTheme.ink.opacity(0.85))
+        .foregroundColor(AppTheme.iconGreen)
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Capsule().fill(AppTheme.card))
-        .overlay(Capsule().stroke(AppTheme.stroke, lineWidth: 1))
+        .padding(.vertical, 10)
+        .background(Capsule().fill(AppTheme.iconWell))
+        .overlay(Capsule().stroke(AppTheme.cardLine, lineWidth: 1))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -452,6 +511,32 @@ struct TriconAcademyLibraryView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             TriconAcademyLibraryView()
+        }
+    }
+}
+
+private struct LibrarySyncStatusView: View {
+    @ObservedObject var store: LibraryBookStore
+
+    var body: some View {
+        if store.lastError != nil {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Library could not refresh", systemImage: "wifi.exclamationmark")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.ink)
+                Text("Showing available books. Check your connection and try again.")
+                    .font(.subheadline)
+                    .foregroundColor(AppTheme.secondaryInk)
+                Button("Try again") { store.refreshInBackground() }
+                    .buttonStyle(AppSecondaryButtonStyle())
+                    .disabled(store.isRefreshing)
+            }
+            .padding(16)
+            .appCard(elevated: false)
+        } else if store.isRefreshing {
+            ProgressView("Updating library…")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .tint(AppTheme.brand)
         }
     }
 }

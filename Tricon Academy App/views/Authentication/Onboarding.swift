@@ -9,9 +9,9 @@ struct OnboardingView: View {
     @State private var page = 0
     @State private var appear = false
 
-    private let brand = AppTheme.brand
-    /// Deep green for CTA gradients under white text.
-    private let brandDeep = Color(red: 0.04, green: 0.36, blue: 0.26)
+    /// Entry green CTAs (pre-login — main app brand is blue after sign-in).
+    private let brand = AppTheme.entryGreen
+    private let brandDeep = AppTheme.entryGreenDeep
     private let ink = AppTheme.ink
     private let muted = AppTheme.muted
     private let canvas = AppTheme.canvas
@@ -84,7 +84,7 @@ struct OnboardingView: View {
                     // Copy
                     VStack(spacing: 12) {
                         Text(current.badge)
-                            .font(.system(size: 12, weight: .semibold))
+                            .appFont(size: 12, weight: .semibold)
                             .tracking(1.4)
                             .foregroundColor(current.accent)
                             .padding(.top, 6)
@@ -97,7 +97,7 @@ struct OnboardingView: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                         Text(current.subtitle)
-                            .font(.system(size: 15.5, weight: .regular))
+                            .appFont(size: 15.5, weight: .regular)
                             .foregroundColor(muted)
                             .multilineTextAlignment(.center)
                             .lineSpacing(3)
@@ -128,34 +128,34 @@ struct OnboardingView: View {
                         if isLastPage {
                             NavigationLink(destination: RegisterView()) {
                                 Text("Create Account")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .appFont(size: 17, weight: .semibold)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 56)
                                     .background(
                                         LinearGradient(
-                                            colors: [brand, brandDeep],
+                                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                                             startPoint: .leading,
                                             endPoint: .trailing
                                         )
                                     )
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
                                     .shadow(color: brand.opacity(0.28), radius: 14, x: 0, y: 8)
                             }
                             .buttonStyle(OnboardingPressStyle())
 
                             NavigationLink(destination: LoginView()) {
                                 Text("I already have an account")
-                                    .font(.system(size: 15.5, weight: .semibold))
+                                    .appFont(size: 15.5, weight: .semibold)
                                     .foregroundColor(ink)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 50)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                             .fill(AppTheme.card)
                                     )
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                             .stroke(AppTheme.strokeStrong, lineWidth: 1.2)
                                     )
                             }
@@ -169,7 +169,7 @@ struct OnboardingView: View {
                                 HStack(spacing: 8) {
                                     Text("Continue")
                                     Image(systemName: "arrow.right")
-                                        .font(.system(size: 14, weight: .bold))
+                                        .appFont(size: 14, weight: .bold)
                                 }
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.white)
@@ -177,19 +177,19 @@ struct OnboardingView: View {
                                 .frame(height: 56)
                                 .background(
                                     LinearGradient(
-                                        colors: [brand, brandDeep],
+                                        colors: [AppTheme.brand, AppTheme.brandFillDeep],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
                                 )
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
                                 .shadow(color: brand.opacity(0.28), radius: 14, x: 0, y: 8)
                             }
                             .buttonStyle(OnboardingPressStyle())
 
                             NavigationLink(destination: LoginView()) {
                                 Text("Log in")
-                                    .font(.system(size: 15.5, weight: .medium))
+                                    .appFont(size: 15.5, weight: .medium)
                                     .foregroundColor(muted)
                             }
                             .padding(.top, 2)
@@ -216,10 +216,10 @@ struct OnboardingView: View {
         HStack(alignment: .center) {
             HStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [brand, brandDeep],
+                                colors: [AppTheme.brand, AppTheme.brandFillDeep],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -232,10 +232,10 @@ struct OnboardingView: View {
 
                 HStack(spacing: 0) {
                     Text("Tricon")
-                        .font(.system(size: 17, weight: .bold))
+                        .appFont(size: 17, weight: .bold)
                         .foregroundColor(ink)
                     Text(" Academy")
-                        .font(.system(size: 17, weight: .medium))
+                        .appFont(size: 17, weight: .medium)
                         .foregroundColor(muted)
                 }
             }
@@ -249,7 +249,7 @@ struct OnboardingView: View {
                     }
                 } label: {
                     Text("Skip")
-                        .font(.system(size: 15, weight: .medium))
+                        .appFont(size: 15, weight: .medium)
                         .foregroundColor(muted)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -297,7 +297,7 @@ private struct OnboardingHeroCard: View {
                         colors: [
                             page.accentSoft,
                             page.accentSoft.opacity(0.55),
-                            Color.white
+                            AppTheme.card
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -379,14 +379,14 @@ private struct WelcomeIllustration: View {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .appFont(size: 11, weight: .semibold)
         }
         .foregroundColor(accent)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(
             Capsule()
-                .fill(Color.white.opacity(0.85))
+                .fill(AppTheme.card.opacity(0.85))
                 .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
         )
     }
@@ -421,7 +421,7 @@ private struct PapersIllustration: View {
                     )
                 Spacer()
                 Text("2024")
-                    .font(.system(size: 11, weight: .bold))
+                    .appFont(size: 11, weight: .bold)
                     .foregroundColor(accent.opacity(0.8))
             }
 
@@ -441,7 +441,7 @@ private struct PapersIllustration: View {
                         .font(.system(size: 11))
                         .foregroundColor(accent)
                     Text("Physics · Paper 1")
-                        .font(.system(size: 11, weight: .semibold))
+                        .appFont(size: 11, weight: .semibold)
                         .foregroundColor(Color(red: 0.2, green: 0.22, blue: 0.25))
                 }
                 .padding(.top, 2)
@@ -450,8 +450,8 @@ private struct PapersIllustration: View {
         .padding(16)
         .frame(width: 170, height: 150)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .fill(AppTheme.card)
                 .shadow(color: accent.opacity(0.18), radius: featured ? 18 : 10, x: 0, y: featured ? 10 : 6)
         )
         .opacity(opacity)
@@ -467,7 +467,7 @@ private struct LessonsIllustration: View {
         VStack(spacing: 14) {
             // Video card
             ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [accent.opacity(0.9), accent.opacity(0.65)],
@@ -482,7 +482,7 @@ private struct LessonsIllustration: View {
                 VStack {
                     Spacer()
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.white.opacity(0.35))
+                        .fill(AppTheme.card.opacity(0.35))
                         .frame(height: 3)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 14)
@@ -490,7 +490,7 @@ private struct LessonsIllustration: View {
                 .frame(width: 210, height: 120)
 
                 Circle()
-                    .fill(Color.white)
+                    .fill(AppTheme.card)
                     .frame(width: 48, height: 48)
                     .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
                     .overlay(
@@ -514,14 +514,14 @@ private struct LessonsIllustration: View {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .semibold))
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .appFont(size: 12, weight: .semibold)
         }
         .foregroundColor(accent)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(Color.white)
+                .fill(AppTheme.card)
                 .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
         )
     }
@@ -543,7 +543,7 @@ private struct ProgressIllustration: View {
             // Weekly activity mock
             VStack(alignment: .leading, spacing: 10) {
                 Text("This week")
-                    .font(.system(size: 12, weight: .semibold))
+                    .appFont(size: 12, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
 
                 HStack(alignment: .bottom, spacing: 10) {
@@ -559,7 +559,7 @@ private struct ProgressIllustration: View {
                                 )
                                 .frame(width: 16, height: 54 * weekHeights[index])
                             Text(weekDays[index])
-                                .font(.system(size: 10, weight: .medium))
+                                .appFont(size: 10, weight: .medium)
                                 .foregroundColor(AppTheme.muted)
                         }
                     }
@@ -569,7 +569,7 @@ private struct ProgressIllustration: View {
             }
             .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                     .fill(AppTheme.card)
                     .shadow(color: accent.opacity(0.14), radius: 12, x: 0, y: 6)
             )
@@ -583,16 +583,16 @@ private struct ProgressIllustration: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(accent)
             Text(value)
-                .font(.system(size: 22, weight: .bold))
+                .appFont(size: 22, weight: .bold)
                 .foregroundColor(AppTheme.ink)
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .appFont(size: 11, weight: .medium)
                 .foregroundColor(AppTheme.muted)
         }
         .padding(14)
         .frame(width: 108, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
                 .shadow(color: accent.opacity(0.14), radius: 12, x: 0, y: 6)
         )

@@ -35,9 +35,9 @@ struct StudentsAdminView: View {
                         .font(.system(size: 32))
                         .foregroundColor(AppTheme.muted)
                     Text("Super admin only")
-                        .font(.system(size: 17, weight: .semibold))
+                        .appFont(size: 17, weight: .semibold)
                     Text("Tutors cannot view student personal information.")
-                        .font(.system(size: 13.5))
+                        .appFont(size: 13.5)
                         .foregroundColor(AppTheme.muted)
                         .multilineTextAlignment(.center)
                 }
@@ -52,7 +52,7 @@ struct StudentsAdminView: View {
                         .font(.system(size: 28))
                         .foregroundColor(AppTheme.danger)
                     Text(errorMessage)
-                        .font(.system(size: 14))
+                        .appFont(size: 14)
                         .foregroundColor(AppTheme.muted)
                         .multilineTextAlignment(.center)
                     Button("Retry") { Task { await load() } }
@@ -67,10 +67,10 @@ struct StudentsAdminView: View {
                         .font(.system(size: 32, weight: .medium))
                         .foregroundColor(AppTheme.muted)
                     Text("No students yet")
-                        .font(.system(size: 17, weight: .semibold))
+                        .appFont(size: 17, weight: .semibold)
                         .foregroundColor(AppTheme.ink)
                     Text("When learners register, they will appear here with their school details.")
-                        .font(.system(size: 13.5))
+                        .appFont(size: 13.5)
                         .foregroundColor(AppTheme.muted)
                         .multilineTextAlignment(.center)
                 }
@@ -106,23 +106,23 @@ struct StudentsAdminView: View {
                     .fill(AppTheme.brandSoft)
                     .frame(width: 44, height: 44)
                 Text(initials(for: student.fullName))
-                    .font(.system(size: 14, weight: .bold))
+                    .appFont(size: 14, weight: .bold)
                     .foregroundColor(AppTheme.brandDeep)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(student.fullName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
                 Text(student.email)
-                    .font(.system(size: 12.5))
+                    .appFont(size: 12.5)
                     .foregroundColor(AppTheme.muted)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
                     if let grade = student.grade, !grade.isEmpty {
                         Text(grade)
-                            .font(.system(size: 11, weight: .semibold))
+                            .appFont(size: 11, weight: .semibold)
                             .foregroundColor(AppTheme.brandDeep)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -130,12 +130,12 @@ struct StudentsAdminView: View {
                     }
                     if let school = student.school, !school.isEmpty {
                         Text(school)
-                            .font(.system(size: 11.5))
+                            .appFont(size: 11.5)
                             .foregroundColor(AppTheme.muted)
                             .lineLimit(1)
                     } else {
                         Text("Profile incomplete")
-                            .font(.system(size: 11.5, weight: .medium))
+                            .appFont(size: 11.5, weight: .medium)
                             .foregroundColor(AppTheme.danger.opacity(0.85))
                     }
                 }
@@ -196,23 +196,23 @@ struct StudentDetailAdminView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [AppTheme.brand, AppTheme.brandDeep],
+                                    colors: [AppTheme.brand, AppTheme.brandFillDeep],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 84, height: 84)
                         Text(initials)
-                            .font(.system(size: 28, weight: .bold))
+                            .appFont(size: 28, weight: .bold)
                             .foregroundColor(.white)
                     }
 
                     Text(profile.fullName)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .appFont(size: 22, weight: .bold, design: .rounded)
                         .foregroundColor(AppTheme.ink)
 
                     Text("Student account")
-                        .font(.system(size: 13, weight: .semibold))
+                        .appFont(size: 13, weight: .semibold)
                         .foregroundColor(AppTheme.brandDeep)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -241,7 +241,7 @@ struct StudentDetailAdminView: View {
 
                 if let created = profile.createdAt {
                     Text("Joined \(created.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.system(size: 12.5))
+                        .appFont(size: 12.5)
                         .foregroundColor(AppTheme.muted)
                 }
             }
@@ -269,18 +269,18 @@ struct StudentDetailAdminView: View {
     private func infoCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 15, weight: .bold))
+                .appFont(size: 15, weight: .bold)
                 .foregroundColor(AppTheme.ink)
             content()
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
     }
@@ -293,10 +293,10 @@ struct StudentDetailAdminView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .appFont(size: 12, weight: .medium)
                     .foregroundColor(AppTheme.muted)
                 Text(value)
-                    .font(.system(size: 15, weight: .semibold))
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
             }
             Spacer(minLength: 0)

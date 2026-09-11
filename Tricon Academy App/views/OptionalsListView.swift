@@ -12,32 +12,42 @@ struct OptionalsListView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Optional subjects")
-                        .font(.system(size: 18, weight: .bold))
+                        .appFont(size: 18, weight: .bold)
                         .foregroundColor(AppTheme.ink)
                     Text("Optional subjects for \(level.rawValue) — papers, notes, and videos.")
-                        .font(.system(size: 13))
-                        .foregroundColor(AppTheme.muted)
+                        .appFont(size: 13)
+                        .foregroundColor(AppTheme.secondaryInk)
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
 
-                LazyVGrid(columns: columns, spacing: 12) {
+                LazyVGrid(columns: columns, spacing: 10) {
                     ForEach(optionalSubjects) { subject in
                         NavigationLink(destination: ContentHubView(level: level, subject: subject, initialTab: initialTab)) {
                             SubjectCardView(subject: subject)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SoftPressStyle())
                     }
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
             }
             .padding(.top, 12)
-            .padding(.bottom, 28)
+            .padding(.bottom, 32)
         }
-        .appScreen()
-        .navigationTitle("Optionals")
+        .background(
+            ZStack {
+                AppTheme.canvas.ignoresSafeArea()
+                LinearGradient(
+                    colors: [AppTheme.brandSoft.opacity(0.38), AppTheme.canvas, AppTheme.canvas],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
+        )
+        .navigationTitle("Optional Subjects")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

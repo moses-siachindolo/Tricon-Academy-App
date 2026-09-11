@@ -160,7 +160,7 @@ final class LibraryBookStore: ObservableObject {
     private let defaults = UserDefaults.standard
     private let key = "library.user.books.v1"
     private let client = SupabaseClient.shared
-    private var isRefreshing = false
+    @Published private(set) var isRefreshing = false
 
     private init() {
         load()
@@ -227,11 +227,8 @@ final class LibraryBookStore: ObservableObject {
         } catch {
             // Keep existing local books; do not clear UI.
             // Timeouts and network failures are non-fatal.
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            if message.lowercased().contains("timed out") {
-                lastError = nil
-            } else {
-                lastError = message
+            if !Task.isCancelled {
+                lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
     }

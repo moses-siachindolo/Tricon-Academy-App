@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Tutor application (after registration)
 
 /// Who can be a tutor: anyone who registers as Tutor, then passes super-admin verification.
+/// Blue subject-style chrome — matches login / register entry flow.
 struct TutorApplicationView: View {
 
     @EnvironmentObject private var authManager: AuthManager
@@ -17,8 +18,14 @@ struct TutorApplicationView: View {
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var appeared = false
+    @State private var loadedDetails = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private let genders = ["Female", "Male"]
+    private let blue = AppTheme.authBlue
+    private let blueDeep = AppTheme.authBlueDeep
+    private let blueSoft = AppTheme.authBlueSoft
+
+    private let genders = ["Prefer not to say", "Female", "Male"]
     private let educationLevels = [
         "Grade 12 / Secondary",
         "Certificate",
@@ -52,15 +59,16 @@ struct TutorApplicationView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 header
-                    .padding(.top, 20)
-                    .padding(.bottom, 22)
+                    .padding(.top, 18)
+                    .padding(.bottom, 18)
 
                 formCard
-                    .padding(.bottom, 16)
+                    .disabled(isLoading)
+                    .padding(.bottom, 14)
 
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.system(size: 13.5, weight: .medium))
+                        .appFont(size: 13.5, weight: .medium)
                         .foregroundColor(AppTheme.danger)
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 12)
@@ -74,25 +82,12 @@ struct TutorApplicationView: View {
                             ProgressView().tint(.white)
                         } else {
                             Text("Submit for approval")
-                                .font(.system(size: 16, weight: .semibold))
+                                .appFont(size: 15.5, weight: .semibold)
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        LinearGradient(
-                            colors: canSubmit
-                                ? [AppTheme.brand, AppTheme.brandDeep]
-                                : [Color.gray.opacity(0.35), Color.gray.opacity(0.35)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
+                .buttonStyle(AppPrimaryButtonStyle())
                 .disabled(!canSubmit)
-                .buttonStyle(AuthPressStyle())
                 .padding(.bottom, 12)
 
                 Button("Sign out") { authManager.logout() }
@@ -100,29 +95,41 @@ struct TutorApplicationView: View {
                     .foregroundColor(AppTheme.muted)
                     .padding(.bottom, 28)
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
             .opacity(appeared ? 1 : 0)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .background(AppTheme.authBlueWash)
+        .scrollDismissesKeyboard(.interactively)
         .onAppear {
             withAnimation(.easeOut(duration: 0.35)) { appeared = true }
-            if let p = authManager.currentUser?.phone, !p.isEmpty { phone = p }
+            guard !loadedDetails, let user = authManager.currentUser else { return }
+            loadedDetails = true
+            phone = user.phone ?? ""
+            highestEducation = user.highestEducation ?? ""
+            lastInstitution = user.lastInstitution ?? ""
+            gender = genders.contains(user.gender ?? "") ? (user.gender ?? "Prefer not to say") : "Prefer not to say"
+            addressLocation = user.addressLocation ?? ""
+            let majors = User.parseSubjectList(user.subjectMajor)
+            selectedSubjects = Set(catalogueSubjects.filter { name in majors.contains { User.subjectsMatch($0, name) } })
+            referenceContacts = user.referenceContacts ?? ""
         }
     }
 
     private var header: some View {
         VStack(spacing: 12) {
             ZStack {
-                Circle().fill(AppTheme.brandSoft).frame(width: 88, height: 88)
+                Circle().fill(blueSoft).frame(width: 80, height: 80)
                 Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundColor(AppTheme.brandDeep)
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundColor(blueDeep)
             }
             Text("Tutor verification")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .appFont(size: 22, weight: .bold)
                 .foregroundColor(AppTheme.ink)
             Text("Anyone can apply to teach on Tricon Academy. A super admin must verify your details before you get tutor access.")
-                .font(.system(size: 14.5))
+                .appFont(size: 13.5, weight: .medium)
                 .foregroundColor(AppTheme.muted)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -130,9 +137,9 @@ struct TutorApplicationView: View {
     }
 
     private var formCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Your details")
-                .font(.system(size: 16, weight: .bold))
+                .appFont(size: 15, weight: .bold)
                 .foregroundColor(AppTheme.ink)
 
             labeledField("Phone number", "e.g. 0976…") {
@@ -142,7 +149,7 @@ struct TutorApplicationView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Highest education attained")
-                    .font(.system(size: 13, weight: .semibold))
+                    .appFont(size: 12.5, weight: .semibold)
                     .foregroundColor(AppTheme.muted)
                 Picker("Education", selection: $highestEducation) {
                     Text("Select…").tag("")
@@ -162,12 +169,12 @@ struct TutorApplicationView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Gender")
-                    .font(.system(size: 13, weight: .semibold))
+                    .appFont(size: 12.5, weight: .semibold)
                     .foregroundColor(AppTheme.muted)
                 Picker("Gender", selection: $gender) {
                     ForEach(genders, id: \.self) { Text($0).tag($0) }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
             }
 
             labeledField("Location / address", "Town, district, or full address") {
@@ -177,44 +184,46 @@ struct TutorApplicationView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Specialist subjects")
-                    .font(.system(size: 13, weight: .semibold))
+                    .appFont(size: 12.5, weight: .semibold)
                     .foregroundColor(AppTheme.muted)
                 Text("Pick the course(s) you teach. You may upload and delete only for these; every other subject stays view-only.")
-                    .font(.system(size: 12))
+                    .appFont(size: 12)
                     .foregroundColor(AppTheme.muted.opacity(0.9))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                LazyVGrid(columns: dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
                     ForEach(catalogueSubjects, id: \.self) { name in
                         let on = selectedSubjects.contains(name)
                         Button {
                             if on { selectedSubjects.remove(name) } else { selectedSubjects.insert(name) }
                         } label: {
                             Text(name)
-                                .font(.system(size: 12.5, weight: .semibold))
+                                .appFont(size: 12.5, weight: .semibold)
                                 .foregroundColor(on ? .white : AppTheme.ink)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 8)
+                                .frame(minHeight: 44)
                                 .frame(maxWidth: .infinity)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(on ? AppTheme.brandDeep : AppTheme.stroke)
+                                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                                        .fill(on ? blueDeep : AppTheme.stroke)
                                 )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(SoftPressStyle())
+                        .accessibilityAddTraits(on ? .isSelected : [])
                     }
                 }
                 if !selectedSubjects.isEmpty {
                     Text("Selected: \(subjectMajorValue)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(AppTheme.brandDeep)
+                        .appFont(size: 12, weight: .medium)
+                        .foregroundColor(blueDeep)
                 }
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Reference contacts")
-                    .font(.system(size: 13, weight: .semibold))
+                    .appFont(size: 12.5, weight: .semibold)
                     .foregroundColor(AppTheme.muted)
                 Text("Names, roles, and phone/email of people or authorities who can confirm your details.")
-                    .font(.system(size: 12))
+                    .appFont(size: 12)
                     .foregroundColor(AppTheme.muted.opacity(0.9))
                 TextEditor(text: $referenceContacts)
                     .frame(minHeight: 100)
@@ -223,23 +232,23 @@ struct TutorApplicationView: View {
                     .scrollContentBackground(.hidden)
             }
         }
-        .padding(18)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(blue.opacity(0.12), lineWidth: 1)
         )
     }
 
     private var fieldBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
             .fill(AppTheme.canvas)
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(AppTheme.stroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                    .stroke(blue.opacity(0.12), lineWidth: 1)
             )
     }
 
@@ -248,13 +257,13 @@ struct TutorApplicationView: View {
         _ placeholder: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(size: 12.5, weight: .semibold)
                 .foregroundColor(AppTheme.muted)
             content()
-                .font(.system(size: 16))
-                .padding(.horizontal, 14)
+                .font(.system(size: 15))
+                .padding(.horizontal, 12)
                 .padding(.vertical, 12)
                 .background(fieldBackground)
         }
@@ -293,28 +302,32 @@ struct TutorPendingApprovalView: View {
     @State private var isRefreshing = false
     @State private var notice: String?
 
+    private let blue = AppTheme.authBlue
+    private let blueDeep = AppTheme.authBlueDeep
+    private let blueSoft = AppTheme.authBlueSoft
+
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 22) {
+            VStack(spacing: 20) {
                 Spacer(minLength: 24)
 
                 ZStack {
                     Circle()
-                        .fill(AppTheme.brandSoft)
-                        .frame(width: 100, height: 100)
+                        .fill(blueSoft)
+                        .frame(width: 96, height: 96)
                     Image(systemName: "hourglass")
-                        .font(.system(size: 40, weight: .medium))
-                        .foregroundColor(AppTheme.brandDeep)
+                        .font(.system(size: 38, weight: .medium))
+                        .foregroundColor(blueDeep)
                 }
 
                 VStack(spacing: 10) {
                     Text("Application under review")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .appFont(size: 22, weight: .bold)
                         .foregroundColor(AppTheme.ink)
                         .multilineTextAlignment(.center)
 
                     Text("Your details were submitted successfully. A super admin will review your application.")
-                        .font(.system(size: 15))
+                        .appFont(size: 14.5, weight: .medium)
                         .foregroundColor(AppTheme.muted)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -322,28 +335,28 @@ struct TutorPendingApprovalView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Label("How to check your result", systemImage: "info.circle.fill")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(AppTheme.ink)
 
-                    Text("Do not create a new account. Log out, then log in later with the same email and password to see if you were approved, rejected, or still pending.")
-                        .font(.system(size: 13.5))
+                    Text("Tap Check status now to see the latest decision. You can also return later using the same email and password.")
+                        .appFont(size: 13, weight: .medium)
                         .foregroundColor(AppTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(16)
+                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(AppTheme.brandSoft.opacity(0.65))
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(blueSoft.opacity(0.85))
                 )
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Not approved after 2 days?")
-                        .font(.system(size: 15, weight: .bold))
+                        .appFont(size: 14, weight: .bold)
                         .foregroundColor(AppTheme.ink)
 
                     Text(AcademySupport.approvalWaitMessage)
-                        .font(.system(size: 13.5))
+                        .appFont(size: 13, weight: .medium)
                         .foregroundColor(AppTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -360,21 +373,21 @@ struct TutorPendingApprovalView: View {
                         url: AcademySupport.emailURL
                     )
                 }
-                .padding(18)
+                .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                         .fill(AppTheme.card)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(AppTheme.stroke, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(blue.opacity(0.12), lineWidth: 1)
                 )
 
                 if let notice {
                     Text(notice)
-                        .font(.system(size: 13.5, weight: .medium))
-                        .foregroundColor(AppTheme.brandDeep)
+                        .appFont(size: 13.5, weight: .medium)
+                        .foregroundColor(blueDeep)
                         .multilineTextAlignment(.center)
                 }
 
@@ -384,45 +397,47 @@ struct TutorPendingApprovalView: View {
                     HStack {
                         if isRefreshing { ProgressView() }
                         Text(isRefreshing ? "Checking…" : "Check status now")
-                            .font(.system(size: 15, weight: .semibold))
+                            .appFont(size: 14.5, weight: .semibold)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(AppTheme.brandSoft)
-                    .foregroundColor(AppTheme.brandDeep)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(minHeight: 48)
+                    .background(blueSoft)
+                    .foregroundColor(blueDeep)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
                 }
                 .disabled(isRefreshing)
 
-                Button("Log out — check later by logging in") {
+                Button("Log out") {
                     authManager.logout()
                 }
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(AppTheme.brandDeep)
+                .foregroundColor(blueDeep)
                 .padding(.bottom, 32)
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .background(AppTheme.authBlueWash)
     }
 
     private func contactRow(icon: String, title: String, value: String, url: URL?) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppTheme.brand)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(blue)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
+                    .appFont(size: 12, weight: .medium)
                     .foregroundColor(AppTheme.muted)
                 if let url {
                     Link(value, destination: url)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14.5, weight: .semibold))
                         .foregroundColor(AppTheme.ink)
                 } else {
                     Text(value)
-                        .font(.system(size: 15, weight: .semibold))
+                        .appFont(size: 14.5, weight: .semibold)
                         .foregroundColor(AppTheme.ink)
                 }
             }
@@ -433,17 +448,18 @@ struct TutorPendingApprovalView: View {
 
     @MainActor
     private func refresh() async {
+        guard !isRefreshing else { return }
         isRefreshing = true
         notice = nil
         defer { isRefreshing = false }
         await authManager.refreshCurrentUserProfile()
         let status = authManager.currentUser?.tutorApprovalStatus
-        if status == TutorApprovalStatus.approved.rawValue || status == nil {
+        if status == TutorApprovalStatus.approved.rawValue {
             notice = "You're approved. Opening the app…"
         } else if status == TutorApprovalStatus.rejected.rawValue {
             notice = "Your application was rejected. Opening the decision screen…"
         } else {
-            notice = "Still waiting for approval. Log out and log in later — do not register again."
+            notice = "Your current status is pending approval. You can check again later."
         }
     }
 }
@@ -456,6 +472,10 @@ struct TutorRejectedView: View {
     @State private var isBusy = false
     @State private var errorMessage: String?
 
+    private let blue = AppTheme.authBlue
+    private let blueDeep = AppTheme.authBlueDeep
+    private let blueSoft = AppTheme.authBlueSoft
+
     private var reason: String {
         let r = authManager.currentUser?.adminStatusReason?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -466,26 +486,26 @@ struct TutorRejectedView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 22) {
+            VStack(spacing: 20) {
                 Spacer(minLength: 28)
 
                 ZStack {
                     Circle()
                         .fill(AppTheme.danger.opacity(0.12))
-                        .frame(width: 100, height: 100)
+                        .frame(width: 96, height: 96)
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 44, weight: .medium))
+                        .font(.system(size: 42, weight: .medium))
                         .foregroundColor(AppTheme.danger)
                 }
 
                 VStack(spacing: 10) {
                     Text("Application not approved")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .appFont(size: 22, weight: .bold)
                         .foregroundColor(AppTheme.ink)
                         .multilineTextAlignment(.center)
 
                     Text("Your tutor application was reviewed and could not be approved at this time.")
-                        .font(.system(size: 15))
+                        .appFont(size: 14.5, weight: .medium)
                         .foregroundColor(AppTheme.muted)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -493,43 +513,43 @@ struct TutorRejectedView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Reason from Tricon Academy")
-                        .font(.system(size: 14, weight: .bold))
+                        .appFont(size: 13.5, weight: .bold)
                         .foregroundColor(AppTheme.ink)
                     Text(reason)
-                        .font(.system(size: 15))
+                        .appFont(size: 14.5)
                         .foregroundColor(AppTheme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(AppTheme.card)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(AppTheme.danger.opacity(0.2), lineWidth: 1)
-                )
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Questions?")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(AppTheme.ink)
-                    Text("Call \(AcademySupport.phoneDisplay) or email \(AcademySupport.email). Use Log in with this same account — do not create a new one.")
-                        .font(.system(size: 13.5))
-                        .foregroundColor(AppTheme.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(AppTheme.brandSoft.opacity(0.6))
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(AppTheme.danger.opacity(0.2), lineWidth: 1)
+                )
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Questions?")
+                        .appFont(size: 13.5, weight: .bold)
+                        .foregroundColor(AppTheme.ink)
+                    Text("Call \(AcademySupport.phoneDisplay) or email \(AcademySupport.email). Use Log in with this same account — do not create a new one.")
+                        .appFont(size: 13, weight: .medium)
+                        .foregroundColor(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(blueSoft.opacity(0.85))
                 )
 
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.system(size: 13.5, weight: .medium))
+                        .appFont(size: 13.5, weight: .medium)
                         .foregroundColor(AppTheme.danger)
                 }
 
@@ -539,20 +559,10 @@ struct TutorRejectedView: View {
                     HStack {
                         if isBusy { ProgressView().tint(.white) }
                         Text(isBusy ? "Opening form…" : "Update details & resubmit")
-                            .font(.system(size: 16, weight: .semibold))
+                            .appFont(size: 15.5, weight: .semibold)
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(
-                        LinearGradient(
-                            colors: [AppTheme.brand, AppTheme.brandDeep],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
+                .buttonStyle(AppPrimaryButtonStyle())
                 .disabled(isBusy)
 
                 Button("Log out") { authManager.logout() }
@@ -560,13 +570,16 @@ struct TutorRejectedView: View {
                     .foregroundColor(AppTheme.muted)
                     .padding(.bottom, 32)
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 20)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
-        .background(AppTheme.canvas.ignoresSafeArea())
+        .background(AppTheme.authBlueWash)
     }
 
     @MainActor
     private func resubmit() async {
+        guard !isBusy else { return }
         errorMessage = nil
         isBusy = true
         defer { isBusy = false }

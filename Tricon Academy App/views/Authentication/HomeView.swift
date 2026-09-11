@@ -7,6 +7,9 @@ struct HomeView: View {
 
     @State private var searchText = ""
     @State private var showUploadSheet = false
+    @ObservedObject private var stats = StatsManager.shared
+    @ObservedObject private var library = ContentLibrary.shared
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     // MARK: - Brand palette
 
@@ -16,6 +19,30 @@ struct HomeView: View {
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
     private let muted = AppTheme.muted
+
+    /// Stronger dark green for Home icons and emphasis (readable in bright light).
+    private let homeIcon = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.48, green: 0.86, blue: 0.68, alpha: 1)
+            : UIColor(red: 0.02, green: 0.22, blue: 0.16, alpha: 1)
+    })
+    /// Darker secondary copy than the global muted gray.
+    private let homeSecondary = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.82, green: 0.85, blue: 0.84, alpha: 1)
+            : UIColor(red: 0.20, green: 0.24, blue: 0.25, alpha: 1)
+    })
+    /// Icon well — a step deeper than brandSoft so it doesn’t wash out on white.
+    private let homeWell = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.10, green: 0.20, blue: 0.16, alpha: 1)
+            : UIColor(red: 0.80, green: 0.90, blue: 0.85, alpha: 1)
+    })
+    private let homeStroke = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.white.withAlphaComponent(0.22)
+            : UIColor(red: 0.06, green: 0.22, blue: 0.17, alpha: 0.12)
+    })
 
     /// Profile tab index: staff have Manage at 3, so Profile is 4.
     private var profileTabIndex: Int {
@@ -35,11 +62,6 @@ struct HomeView: View {
     /// Form locked at registration / Settings.
     private var studentLevel: Level {
         authManager.currentUser?.studentLevel ?? .form1
-    }
-
-    /// Specialist subjects for the tutor home grid (majors + approved extras).
-    private var tutorMajorSubjects: [Subject] {
-        authManager.currentUser?.managedSubjects ?? []
     }
 
     private var greeting: String {
@@ -89,10 +111,12 @@ struct HomeView: View {
 
     var body: some View {
         Group {
-            if isStudent {
+            if authManager.currentUser?.isAdmin == true {
+                AdminHomeView(showsOverview: true)
+            } else if isStudent {
                 studentDashboard
             } else if isTutor {
-                tutorDashboard
+                AdminHomeView(showsOverview: true)
             } else {
                 staffHome
             }
@@ -107,77 +131,45 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Student dashboard (uniform brand, screen-fit)
+    // MARK: - Student dashboard
 
     private var firstName: String {
         let name = authManager.currentUser?.fullName ?? "there"
         return name.split(separator: " ").first.map(String.init) ?? name
     }
 
+    private var continueSubject: Subject? {
+        let name = stats.lastSubjectName
+        guard !name.isEmpty else { return nil }
+        return allSubjects.first { $0.name == name }
+            ?? optionalSubjects.first { $0.name == name }
+    }
+
     private var studentDashboard: some View {
-        GeometryReader { geo in
-            let hPad: CGFloat = 16
-            let gridGap: CGFloat = 8
-            let headerH: CGFloat = 52
-            let sectionGap: CGFloat = 10
-            let libraryH: CGFloat = 54
-            let topPad: CGFloat = 6
-            let bottomPad: CGFloat = 8
-            let subjects = dashboardSubjects
-            let rows = max(1, Int(ceil(Double(subjects.count) / 2.0)))
-            let usedFixed = topPad + headerH + sectionGap + 20 + sectionGap + libraryH + bottomPad
-            let gridAvailable = max(240, geo.size.height - usedFixed)
-            let cardH = max(92, (gridAvailable - CGFloat(rows - 1) * gridGap) / CGFloat(rows))
+        let hPad: CGFloat = 16
 
-            VStack(alignment: .leading, spacing: sectionGap) {
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
                 studentHeader
-                    .frame(height: headerH, alignment: .center)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Subjects")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(brandDeep)
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: gridGap),
-                            GridItem(.flexible(), spacing: gridGap)
-                        ],
-                        spacing: gridGap
-                    ) {
-                        ForEach(subjects) { subject in
-                            NavigationLink {
-                                if subject.name == "Optionals" {
-                                    OptionalsListView(level: studentLevel)
-                                } else {
-                                    ContentHubView(level: studentLevel, subject: subject)
-                                }
-                            } label: {
-                                studentSubjectCard(subject, height: cardH)
-                            }
-                            .buttonStyle(SoftPressStyle())
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity, alignment: .top)
-
+                studentWelcome
+                continueLearningCard
+                dailyProgressRow
+                studentSubjectsSection
                 studentLibraryRow
-                    .frame(height: libraryH)
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, hPad)
-            .padding(.top, topPad)
-            .padding(.bottom, bottomPad)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .background(
             ZStack {
                 canvas.ignoresSafeArea()
-                // Soft brand wash — uniform green atmosphere
                 LinearGradient(
                     colors: [
-                        brandSoft.opacity(0.48),
+                        brandSoft.opacity(0.38),
                         canvas,
                         canvas
                     ],
@@ -187,39 +179,61 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
         )
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var studentWelcome: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(studentLevel.rawValue + " · Your learning space", systemImage: "sparkles")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.white.opacity(0.85))
+            Text("A little progress,\nevery day.")
+                .font(.largeTitle.bold())
+                .foregroundColor(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Explore your subjects, practise a paper, or pick up where you left off.")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(24)
+        .background(LinearGradient(colors: [brand, AppTheme.entryGreenDeep], startPoint: .topLeading, endPoint: .bottomTrailing))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
     }
 
     private var studentHeader: some View {
         HStack(alignment: .center, spacing: 10) {
-            // Brand form badge
             ZStack {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [brand, brandDeep],
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 40, height: 40)
-                    .shadow(color: brand.opacity(0.22), radius: 6, x: 0, y: 3)
+                    .frame(width: 42, height: 42)
 
                 Text(studentLevel.shortLabel)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .appFont(size: 15, weight: .bold, design: .rounded)
                     .foregroundColor(.white)
+                    .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(studentLevel.rawValue)
-                    .font(.system(size: 18, weight: .bold))
+                    .appFont(size: 18, weight: .semibold)
                     .foregroundColor(ink)
                     .lineLimit(1)
 
-                Text("Hi \(firstName) — ready to learn?")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(muted)
+                Text("\(greeting), \(firstName)")
+                    .appFont(size: 13, weight: .regular)
+                    .foregroundColor(homeSecondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
 
             Spacer(minLength: 6)
@@ -229,90 +243,261 @@ struct HomeView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(brandSoft)
-                        .frame(width: 34, height: 34)
-                        .overlay(
-                            Circle()
-                                .stroke(brand.opacity(0.16), lineWidth: 1)
-                        )
+                        .fill(homeWell)
+                        .frame(width: 44, height: 44)
+                        .overlay(Circle().stroke(homeStroke, lineWidth: 1))
                     Text(initials)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(brandDeep)
+                        .appFont(size: 12, weight: .semibold)
+                        .foregroundColor(homeIcon)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
             .accessibilityLabel("Open profile")
         }
+
     }
 
-    private func studentSubjectCard(_ subject: Subject, height: CGFloat) -> some View {
-        let counts = contentCounts(for: subject)
-        let total = counts.papers + counts.notes + counts.videos
-
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 6) {
-                Image(systemName: subject.icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(brandDeep)
-                    .symbolRenderingMode(.hierarchical)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(brandSoft)
-                    )
-
-                Spacer(minLength: 4)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(brand.opacity(0.4))
-                    .padding(5)
-                    .background(Circle().fill(brandSoft.opacity(0.7)))
+    private var continueLearningCard: some View {
+        Group {
+            if let subject = continueSubject {
+                NavigationLink {
+                    if subject.name == "Optionals" {
+                        OptionalsListView(level: studentLevel)
+                    } else {
+                        ContentHubView(level: studentLevel, subject: subject)
+                    }
+                } label: {
+                    continueLearningBody(subject: subject)
+                }
+                .buttonStyle(SoftPressStyle())
+            } else {
+                continueLearningEmpty
             }
-
-            Spacer(minLength: 6)
-
-            Text(subject.name)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-
-            Text("\(total) resources")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(muted)
-                .padding(.top, 2)
-
-            HStack(spacing: 4) {
-                metaDot("\(counts.papers)P")
-                metaDot("\(counts.notes)N")
-                metaDot("\(counts.videos)V")
-            }
-            .padding(.top, 6)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(AppTheme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(brand.opacity(0.10), lineWidth: 1)
-        )
-        .shadow(color: brand.opacity(0.04), radius: 8, x: 0, y: 3)
-        .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 1)
     }
 
-    private func metaDot(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 9.5, weight: .bold, design: .rounded))
-            .foregroundColor(brandDeep)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(
-                Capsule()
-                    .fill(brandSoft)
+    private func continueLearningBody(subject: Subject) -> some View {
+        let counts = contentCounts(for: subject)
+        let total = max(1, counts.papers + counts.notes + counts.videos)
+        let fraction = stats.progress(forSubject: subject.name, totalResources: total)
+        let kindLabel = stats.lastKind?.displayName
+        let topic = stats.lastTopicTitle.isEmpty ? "Papers, notes & videos" : stats.lastTopicTitle
+        let subtitle = kindLabel.map { "\($0) · \(topic)" } ?? topic
+
+        return HStack(spacing: 10) {
+            Image(systemName: subject.icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(homeIcon)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 36, height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(homeWell)
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Continue · \(displayName(for: subject))")
+                    .appFont(size: 13.5, weight: .semibold)
+                    .foregroundColor(ink)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .appFont(size: 11.5, weight: .regular)
+                    .foregroundColor(homeSecondary)
+                    .lineLimit(1)
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(homeWell)
+                        Capsule()
+                            .fill(homeIcon)
+                            .frame(width: max(6, geo.size.width * CGFloat(max(0.05, fraction))))
+                    }
+                }
+                .frame(height: 4)
+                .accessibilityHidden(true)
+            }
+
+            Text("\(Int((fraction * 100).rounded()))%")
+                .appFont(size: 12, weight: .semibold, design: .rounded)
+                .foregroundColor(homeIcon)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(homeCardBackground)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Continue learning \(displayName(for: subject)), \(topic), \(Int((fraction * 100).rounded())) percent complete")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var continueLearningEmpty: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "book.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(homeIcon)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 36, height: 36)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(homeWell)
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Continue learning")
+                    .appFont(size: 13.5, weight: .semibold)
+                    .foregroundColor(ink)
+                Text("Open a subject and we’ll save your place.")
+                    .appFont(size: 11.5, weight: .regular)
+                    .foregroundColor(homeSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(homeCardBackground)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Continue learning. Open a subject and we’ll save your place.")
+    }
+
+    private var dailyProgressRow: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(homeIcon)
+                    .symbolRenderingMode(.monochrome)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(stats.dayStreak == 1 ? "1 day streak" : "\(stats.dayStreak) day streak")
+                        .appFont(size: 12.5, weight: .semibold)
+                        .foregroundColor(ink)
+                        .lineLimit(1)
+                    Text("Keep going")
+                        .appFont(size: 11, weight: .regular)
+                        .foregroundColor(homeSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(stats.dayStreak) day streak")
+
+            Rectangle()
+                .fill(homeStroke)
+                .frame(width: 1, height: 28)
+                .padding(.horizontal, 10)
+
+            HStack(spacing: 8) {
+                Image(systemName: stats.dailyGoalComplete ? "checkmark.circle.fill" : "target")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(homeIcon)
+                    .symbolRenderingMode(.monochrome)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(stats.dailyGoalComplete ? "Goal done" : "Today’s goal")
+                        .appFont(size: 12.5, weight: .semibold)
+                        .foregroundColor(ink)
+                        .lineLimit(1)
+                    Text("\(min(stats.resourcesOpenedToday, stats.dailyGoal)) of \(stats.dailyGoal)")
+                        .appFont(size: 11, weight: .regular)
+                        .foregroundColor(homeSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Today’s goal, \(stats.resourcesOpenedToday) of \(stats.dailyGoal) resources")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(homeCardBackground)
+    }
+
+    private var studentSubjectsSection: some View {
+        let gridGap: CGFloat = 10
+        let subjects = dashboardSubjects
+
+        return VStack(alignment: .leading, spacing: 9) {
+            Text("Subjects")
+                .appFont(size: 11, weight: .semibold)
+                .foregroundColor(homeIcon)
+                .tracking(0.3)
+
+            LazyVGrid(
+                columns: dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 145), spacing: gridGap)],
+                spacing: gridGap
+            ) {
+                ForEach(subjects) { subject in
+                    NavigationLink {
+                        if subject.name == "Optionals" {
+                            OptionalsListView(level: studentLevel)
+                        } else {
+                            ContentHubView(level: studentLevel, subject: subject)
+                        }
+                    } label: {
+                        studentSubjectCard(subject)
+                    }
+                    .buttonStyle(SoftPressStyle())
+                }
+            }
+        }
+    }
+
+    private func displayName(for subject: Subject) -> String {
+        subject.name == "Optionals" ? "Optional Subjects" : subject.name
+    }
+
+    private func studentSubjectCard(_ subject: Subject) -> some View {
+        let counts = contentCounts(for: subject)
+        let isOptionals = subject.name == "Optionals"
+        let subtitle = isOptionals
+            ? "Civic · Accounts · RE · CS"
+            : "\(counts.papers) papers · \(counts.notes) notes · \(counts.videos) videos"
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: subject.icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(homeIcon)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(homeWell)
+                )
+                .accessibilityHidden(true)
+
+            Text(displayName(for: subject))
+                .font(.headline)
+                .foregroundColor(ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(homeSecondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 126, alignment: .topLeading)
+        .background(homeCardBackground)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(displayName(for: subject)). \(subtitle).")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens lessons for this subject")
+    }
+
+    private var homeCardBackground: some View {
+        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+            .fill(AppTheme.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                    .stroke(homeStroke, lineWidth: 1)
             )
     }
 
@@ -321,20 +506,20 @@ struct HomeView: View {
             var p = 0, n = 0, v = 0
             for s in optionalSubjects {
                 p += CurriculumData.pastPapers(level: studentLevel, subject: s.name).count
-                    + ContentLibrary.shared.papers(level: studentLevel, subject: s.name).count
+                    + library.papers(level: studentLevel, subject: s.name).count
                 n += CurriculumData.materials(level: studentLevel, subject: s.name).count
-                    + ContentLibrary.shared.materials(level: studentLevel, subject: s.name).count
+                    + library.materials(level: studentLevel, subject: s.name).count
                 v += CurriculumData.videos(level: studentLevel, subject: s.name).count
-                    + ContentLibrary.shared.videos(level: studentLevel, subject: s.name).count
+                    + library.videos(level: studentLevel, subject: s.name).count
             }
             return (p, n, v)
         }
         let papers = CurriculumData.pastPapers(level: studentLevel, subject: subject.name).count
-            + ContentLibrary.shared.papers(level: studentLevel, subject: subject.name).count
+            + library.papers(level: studentLevel, subject: subject.name).count
         let notes = CurriculumData.materials(level: studentLevel, subject: subject.name).count
-            + ContentLibrary.shared.materials(level: studentLevel, subject: subject.name).count
+            + library.materials(level: studentLevel, subject: subject.name).count
         let videos = CurriculumData.videos(level: studentLevel, subject: subject.name).count
-            + ContentLibrary.shared.videos(level: studentLevel, subject: subject.name).count
+            + library.videos(level: studentLevel, subject: subject.name).count
         return (papers, notes, videos)
     }
 
@@ -342,441 +527,44 @@ struct HomeView: View {
         NavigationLink {
             TriconAcademyLibraryView()
         } label: {
-            HStack(spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
                 Image(systemName: "books.vertical.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(homeIcon)
+                    .symbolRenderingMode(.monochrome)
+                    .frame(width: 36, height: 36)
                     .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [brand, brandDeep],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                        RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                            .fill(homeWell)
                     )
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Tricon Academy Library")
-                        .font(.system(size: 13, weight: .bold))
+                        .appFont(size: 13.5, weight: .semibold)
                         .foregroundColor(ink)
                         .lineLimit(1)
-                    Text("Books & extra reading")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(muted)
+                    Text("Extra reading beyond the syllabus")
+                        .appFont(size: 11.5, weight: .regular)
+                        .foregroundColor(homeSecondary)
                         .lineLimit(1)
                 }
 
                 Spacer(minLength: 4)
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(brandDeep)
-                    .padding(6)
-                    .background(Circle().fill(brandSoft))
-            }
-            .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(AppTheme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(brand.opacity(0.10), lineWidth: 1)
-            )
-            .shadow(color: brand.opacity(0.04), radius: 8, x: 0, y: 3)
-        }
-        .buttonStyle(SoftPressStyle())
-    }
-
-    // MARK: - Tutor dashboard (compact, majors only, admin-locked)
-
-    private var tutorDashboard: some View {
-        GeometryReader { geo in
-            let hPad: CGFloat = 16
-            let gridGap: CGFloat = 6
-            let headerH: CGFloat = 48
-            let sectionGap: CGFloat = 8
-            let showActions = authManager.currentUser?.canManageContent == true
-            let actionsH: CGFloat = showActions ? 30 : 0
-            let libraryH: CGFloat = 50
-            let topPad: CGFloat = 4
-            let bottomPad: CGFloat = 6
-            let subjects = tutorMajorSubjects
-            let rows = max(1, Int(ceil(Double(max(subjects.count, 1)) / 2.0)))
-            let actionsBlock = showActions ? (actionsH + sectionGap) : 0
-            let usedFixed = topPad + headerH + sectionGap + actionsBlock + 18 + sectionGap + libraryH + bottomPad
-            let gridAvailable = max(200, geo.size.height - usedFixed)
-            let cardH = max(84, min(110, (gridAvailable - CGFloat(rows - 1) * gridGap) / CGFloat(rows)))
-
-            VStack(alignment: .leading, spacing: sectionGap) {
-                tutorHeader
-                    .frame(height: headerH, alignment: .center)
-
-                if showActions {
-                    tutorActions
-                        .frame(height: actionsH)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 5) {
-                        Text("Your subjects")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(brandDeep)
-                            .tracking(0.4)
-                            .textCase(.uppercase)
-
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(brand.opacity(0.55))
-
-                        Spacer(minLength: 4)
-
-                        NavigationLink {
-                            SettingsView()
-                        } label: {
-                            Text("Request access")
-                                .font(.system(size: 10.5, weight: .semibold))
-                                .foregroundColor(brandDeep)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(brandSoft))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    if subjects.isEmpty {
-                        tutorEmptyMajorsCard
-                            .frame(maxWidth: .infinity, minHeight: max(120, gridAvailable * 0.5))
-                    } else {
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: gridGap),
-                                GridItem(.flexible(), spacing: gridGap)
-                            ],
-                            spacing: gridGap
-                        ) {
-                            ForEach(subjects) { subject in
-                                NavigationLink {
-                                    SubjectLevelPickerView(subject: subject)
-                                } label: {
-                                    tutorSubjectCard(subject, height: cardH)
-                                }
-                                .buttonStyle(SoftPressStyle())
-                            }
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity, alignment: .top)
-
-                tutorLibraryRow
-                    .frame(height: libraryH)
-            }
-            .padding(.horizontal, hPad)
-            .padding(.top, topPad)
-            .padding(.bottom, bottomPad)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-        }
-        .background(
-            ZStack {
-                canvas.ignoresSafeArea()
-                LinearGradient(
-                    colors: [
-                        brandSoft.opacity(0.45),
-                        canvas,
-                        canvas
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            }
-        )
-        .navigationBarHidden(true)
-    }
-
-    private var tutorHeader: some View {
-        HStack(alignment: .center, spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [brand, brandDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 40, height: 40)
-                    .shadow(color: brand.opacity(0.2), radius: 6, x: 0, y: 3)
-
-                Image(systemName: "person.badge.shield.checkmark.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Tutor")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(ink)
-                    .lineLimit(1)
-
-                Text(tutorMajorSubjects.isEmpty
-                     ? "Hi \(firstName) · majors pending"
-                     : "Hi \(firstName) · \(tutorMajorSubjects.count) approved")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(muted)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 6)
-
-            Button {
-                selectedTab = profileTabIndex
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(brandSoft)
-                        .frame(width: 34, height: 34)
-                        .overlay(
-                            Circle()
-                                .stroke(brand.opacity(0.16), lineWidth: 1)
-                        )
-                    Text(initials)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(brandDeep)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open profile")
-        }
-    }
-
-    private var tutorActions: some View {
-        HStack(spacing: 6) {
-            Button {
-                showUploadSheet = true
-            } label: {
-                Label("Upload", systemImage: "arrow.up.doc.fill")
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 30)
-                    .background(
-                        LinearGradient(
-                            colors: [brand, brandDeep],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            }
-
-            Button {
-                selectedTab = manageTabIndex
-            } label: {
-                Label("Manage", systemImage: "slider.horizontal.3")
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 30)
-                    .background(brandSoft)
-                    .foregroundColor(brandDeep)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(brand.opacity(0.16), lineWidth: 1)
-                    )
-            }
-        }
-    }
-
-    private var tutorEmptyMajorsCard: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "lock.rectangle.stack")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(brandDeep)
-                .padding(10)
-                .background(Circle().fill(brandSoft))
-
-            Text("No approved subjects")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(ink)
-
-            Text("Majors are set during verification. Request extra subjects in Settings — an admin must approve.")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(muted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 6)
-
-            NavigationLink {
-                SettingsView()
-            } label: {
-                Text("Open Settings")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule().fill(
-                            LinearGradient(colors: [brand, brandDeep], startPoint: .leading, endPoint: .trailing)
-                        )
-                    )
-            }
-            .buttonStyle(SoftPressStyle())
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(AppTheme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(brand.opacity(0.10), lineWidth: 1)
-        )
-    }
-
-    private func tutorSubjectCard(_ subject: Subject, height: CGFloat) -> some View {
-        let counts = tutorContentCounts(for: subject)
-        let total = counts.papers + counts.notes + counts.videos
-        let canManage = authManager.currentUser?.canManageSubject(subject.name) == true
-
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: 6) {
-                Image(systemName: subject.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(brandDeep)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(brandSoft)
-                    )
-
-                Spacer(minLength: 4)
-
-                if canManage {
-                    Text("Edit")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(brandDeep)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(brandSoft))
-                }
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(brand.opacity(0.4))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(homeSecondary)
             }
-
-            Spacer(minLength: 6)
-
-            Text(subject.name)
-                .font(.system(size: 13.5, weight: .bold))
-                .foregroundColor(ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-
-            Text("\(total) resources")
-                .font(.system(size: 10.5, weight: .medium))
-                .foregroundColor(muted)
-                .padding(.top, 2)
-
-            HStack(spacing: 4) {
-                tutorMeta("\(counts.papers)P")
-                tutorMeta("\(counts.notes)N")
-                tutorMeta("\(counts.videos)V")
-            }
-            .padding(.top, 6)
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(AppTheme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(brand.opacity(0.10), lineWidth: 1)
-        )
-        .shadow(color: brand.opacity(0.04), radius: 8, x: 0, y: 3)
-    }
-
-    private func tutorMeta(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 9.5, weight: .bold, design: .rounded))
-            .foregroundColor(brandDeep)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(brandSoft))
-    }
-
-    private var tutorLibraryRow: some View {
-        NavigationLink {
-            TriconAcademyLibraryView()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "books.vertical.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [brand, brandDeep],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Academy Library")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(ink)
-                        .lineLimit(1)
-                    Text("Books & reading")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(muted)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 4)
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(brandDeep)
-                    .padding(6)
-                    .background(Circle().fill(brandSoft))
-            }
-            .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(AppTheme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(brand.opacity(0.10), lineWidth: 1)
-            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(homeCardBackground)
+            .contentShape(Rectangle())
         }
         .buttonStyle(SoftPressStyle())
-    }
-
-    /// Aggregate resource counts across Form 1–4 for a tutor subject card.
-    private func tutorContentCounts(for subject: Subject) -> (papers: Int, notes: Int, videos: Int) {
-        var p = 0, n = 0, v = 0
-        for level in Level.activeCases {
-            p += CurriculumData.pastPapers(level: level, subject: subject.name).count
-                + ContentLibrary.shared.papers(level: level, subject: subject.name).count
-            n += CurriculumData.materials(level: level, subject: subject.name).count
-                + ContentLibrary.shared.materials(level: level, subject: subject.name).count
-            v += CurriculumData.videos(level: level, subject: subject.name).count
-                + ContentLibrary.shared.videos(level: level, subject: subject.name).count
-        }
-        return (p, n, v)
+        .accessibilityLabel("Tricon Academy Library. Extra reading beyond your syllabus.")
+        .accessibilityHint("Opens books and extra reading")
     }
 
     // MARK: - Staff home (admin — all forms)
@@ -808,8 +596,9 @@ struct HomeView: View {
             .padding(.bottom, 20)
         }
         .background(canvas.ignoresSafeArea())
-        .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Header (staff)
@@ -818,10 +607,10 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(greeting)
-                    .font(.system(size: 14, weight: .medium))
+                    .appFont(size: 14, weight: .medium)
                     .foregroundColor(muted)
                 Text(authManager.currentUser?.fullName ?? "Student")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .appFont(size: 24, weight: .bold, design: .rounded)
                     .foregroundColor(ink)
                     .lineLimit(1)
             }
@@ -835,7 +624,7 @@ struct HomeView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [brand, brandDeep],
+                                colors: [AppTheme.brand, AppTheme.brandFillDeep],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -844,11 +633,11 @@ struct HomeView: View {
                         .shadow(color: brand.opacity(0.28), radius: 10, x: 0, y: 5)
 
                     Text(initials)
-                        .font(.system(size: 15, weight: .bold))
+                        .appFont(size: 15, weight: .bold)
                         .foregroundColor(.white)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
             .accessibilityLabel("Open profile")
         }
     }
@@ -861,16 +650,16 @@ struct HomeView: View {
                 Label("Upload", systemImage: "arrow.up.doc.fill")
                     .font(.system(size: 12.5, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .frame(minHeight: 48)
                     .background(
                         LinearGradient(
-                            colors: [brand, brandDeep],
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous))
                     .shadow(color: brand.opacity(0.18), radius: 6, x: 0, y: 3)
             }
 
@@ -880,12 +669,12 @@ struct HomeView: View {
                 Label("Manage", systemImage: "slider.horizontal.3")
                     .font(.system(size: 12.5, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 36)
+                    .frame(minHeight: 48)
                     .background(brandSoft)
                     .foregroundColor(brandDeep)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
                             .stroke(brand.opacity(0.16), lineWidth: 1)
                     )
             }
@@ -909,9 +698,7 @@ struct HomeView: View {
                 Button {
                     searchText = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(AppTheme.subtle)
+                    AppIconLabel(systemName: "xmark", tint: AppTheme.secondaryInk, fill: AppTheme.fill)
                 }
                 .accessibilityLabel("Clear search")
             }
@@ -919,11 +706,11 @@ struct HomeView: View {
         .padding(.vertical, 13)
         .padding(.horizontal, 14)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
         .shadow(color: AppTheme.shadow, radius: 6, x: 0, y: 2)
@@ -934,7 +721,7 @@ struct HomeView: View {
     private var gradesSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             LevelPickerHeader(
-                title: "Your grades",
+                title: "Curriculum forms",
                 subtitle: "Select a form to open subjects, papers, notes, and videos."
             )
             .padding(.horizontal, AppTheme.horizontalPadding)
@@ -951,7 +738,7 @@ struct HomeView: View {
     private var librarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tricon Academy Library")
-                .font(.system(size: 16, weight: .bold))
+                .appFont(size: 16, weight: .bold)
                 .foregroundColor(ink)
                 .padding(.horizontal, AppTheme.horizontalPadding)
 
@@ -960,7 +747,7 @@ struct HomeView: View {
             } label: {
                 HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                             .fill(brandSoft)
                             .frame(width: 52, height: 52)
                         Image(systemName: "books.vertical.fill")
@@ -970,10 +757,10 @@ struct HomeView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Browse the library")
-                            .font(.system(size: 16, weight: .semibold))
+                            .appFont(size: 16, weight: .semibold)
                             .foregroundColor(ink)
                         Text("Tech · Science · Business · Stories")
-                            .font(.system(size: 12.5, weight: .medium))
+                            .appFont(size: 12.5, weight: .medium)
                             .foregroundColor(muted)
                             .lineLimit(1)
                     }
@@ -986,16 +773,16 @@ struct HomeView: View {
                 }
                 .padding(14)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                         .fill(AppTheme.card)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                         .stroke(brand.opacity(0.18), lineWidth: 1)
                 )
                 .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
             .padding(.horizontal, AppTheme.horizontalPadding)
         }
         .padding(.top, 2)
@@ -1006,7 +793,7 @@ struct HomeView: View {
     private var quickAccessSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Quick access")
-                .font(.system(size: 16, weight: .bold))
+                .appFont(size: 16, weight: .bold)
                 .foregroundColor(ink)
                 .padding(.horizontal, AppTheme.horizontalPadding)
 
@@ -1053,7 +840,7 @@ struct HomeView: View {
                             Image(systemName: "bookmark.fill")
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Saved")
-                                .font(.system(size: 13, weight: .semibold))
+                                .appFont(size: 13, weight: .semibold)
                         }
                         .foregroundColor(AppTheme.bookmark)
                         .padding(.horizontal, 14)
@@ -1062,7 +849,7 @@ struct HomeView: View {
                             Capsule().fill(AppTheme.bookmark.opacity(0.14))
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(SoftPressStyle())
                 }
                 .padding(.horizontal, AppTheme.horizontalPadding)
             }
@@ -1082,7 +869,7 @@ struct HomeView: View {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .appFont(size: 13, weight: .semibold)
             }
             .foregroundColor(color)
             .padding(.horizontal, 14)
@@ -1090,7 +877,7 @@ struct HomeView: View {
             .background(Capsule().fill(soft))
             .overlay(Capsule().stroke(color.opacity(0.22), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SoftPressStyle())
     }
 
     // MARK: - Search results (staff)
@@ -1109,10 +896,10 @@ struct HomeView: View {
                             .foregroundColor(brandDeep)
                     }
                     Text("No results for “\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))”")
-                        .font(.system(size: 15, weight: .semibold))
+                        .appFont(size: 15, weight: .semibold)
                         .foregroundColor(ink)
                     Text("Try a subject like Physics, or a level like Form 1.")
-                        .font(.system(size: 13))
+                        .appFont(size: 13)
                         .foregroundColor(muted)
                         .multilineTextAlignment(.center)
                 }
@@ -1122,7 +909,7 @@ struct HomeView: View {
             } else {
                 if !filteredLevels.isEmpty {
                     Text("Levels")
-                        .font(.system(size: 17, weight: .bold))
+                        .appFont(size: 17, weight: .bold)
                         .foregroundColor(ink)
                         .padding(.horizontal, AppTheme.horizontalPadding)
 
@@ -1131,7 +918,7 @@ struct HomeView: View {
                             NavigationLink(destination: SubjectListView(level: level)) {
                                 LevelTile(level: level, style: .row)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SoftPressStyle())
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)
@@ -1139,7 +926,7 @@ struct HomeView: View {
 
                 if !filteredSubjects.isEmpty {
                     Text("Subjects")
-                        .font(.system(size: 17, weight: .bold))
+                        .appFont(size: 17, weight: .bold)
                         .foregroundColor(ink)
                         .padding(.horizontal, AppTheme.horizontalPadding)
 
@@ -1148,7 +935,7 @@ struct HomeView: View {
                             NavigationLink(destination: SubjectLevelPickerView(subject: subject)) {
                                 HStack(spacing: 14) {
                                     ZStack {
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                             .fill(subject.swiftUIColor.opacity(0.14))
                                             .frame(width: 44, height: 44)
                                         Image(systemName: subject.icon)
@@ -1157,10 +944,10 @@ struct HomeView: View {
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(subject.name)
-                                            .font(.system(size: 15, weight: .semibold))
+                                            .appFont(size: 15, weight: .semibold)
                                             .foregroundColor(ink)
                                         Text("Choose a level to open")
-                                            .font(.system(size: 12))
+                                            .appFont(size: 12)
                                             .foregroundColor(muted)
                                     }
                                     Spacer()
@@ -1170,15 +957,15 @@ struct HomeView: View {
                                 }
                                 .padding(12)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                                         .fill(AppTheme.card)
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                                         .stroke(AppTheme.stroke, lineWidth: 1)
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(SoftPressStyle())
                         }
                     }
                     .padding(.horizontal, AppTheme.horizontalPadding)

@@ -1,6 +1,7 @@
 import SwiftUI
 import PDFKit
 import UIKit
+import CryptoKit
 
 struct PDFViewerScreen: View {
 
@@ -16,12 +17,12 @@ struct PDFViewerScreen: View {
     var topic: String = ""
 
     @ObservedObject private var saved = SavedItemsManager.shared
-    @State private var generatedURL: URL?
-    @State private var remoteCachedURL: URL?
+    @State private var hasRecordedOpen = false
+    @State private var loadedDocument: PDFDocument?
     @State private var remoteLoadFailed = false
+    @State private var isDownloading = false
 
     private var resolvedURL: URL? {
-        if let remoteCachedURL { return remoteCachedURL }
         // Absolute path from local uploads
         if fileName.hasPrefix("/") {
             let url = URL(fileURLWithPath: fileName)
@@ -36,7 +37,7 @@ struct PDFViewerScreen: View {
            let bundle = Bundle.main.url(forResource: (fileName as NSString).deletingPathExtension, withExtension: "pdf") {
             return bundle
         }
-        return generatedURL
+        return nil
     }
 
     private var isRemoteFile: Bool {
@@ -49,8 +50,8 @@ struct PDFViewerScreen: View {
 
     var body: some View {
         Group {
-            if let url = resolvedURL {
-                PDFKitView(url: url)
+            if let document = loadedDocument, !remoteLoadFailed {
+                PDFKitView(document: document)
             } else {
                 loadingOrError
             }
@@ -64,30 +65,32 @@ struct PDFViewerScreen: View {
                     Button {
                         toggleBookmark()
                     } label: {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .foregroundColor(isBookmarked ? AppTheme.bookmark : AppTheme.brandDeep)
+                        AppIconLabel(systemName: isBookmarked ? "bookmark.fill" : "bookmark",
+                                     tint: isBookmarked ? AppTheme.bookmark : AppTheme.brandDeep)
                     }
                     .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Save")
                 }
             }
         }
-        .onAppear {
-            if isPastPaper {
-                StatsManager.shared.recordPaperOpened()
-            }
-            if isRemoteFile {
-                Task { await downloadRemotePDFIfNeeded() }
-            } else if resolvedURL == nil {
-                generatedURL = PDFGenerator.makeDocument(
-                    title: title,
-                    subject: subjectName,
-                    level: levelRaw,
-                    year: year,
-                    topic: topic,
-                    isPastPaper: isPastPaper
-                )
-            }
+        .task(id: fileName) {
+            loadedDocument = nil
+            hasRecordedOpen = false
+            await loadDocument()
         }
+    }
+
+    private func recordSuccessfulOpen() {
+        guard !hasRecordedOpen else { return }
+        hasRecordedOpen = true
+        if isPastPaper {
+            StatsManager.shared.recordPaperOpened()
+        } else {
+            StatsManager.shared.recordNotesOpened()
+        }
+        StatsManager.shared.recordResourceOpened(
+            id: contentId, subject: subjectName, title: title,
+            kind: isPastPaper ? .paper : .notes, levelRaw: levelRaw
+        )
     }
 
     private var loadingOrError: some View {
@@ -96,54 +99,57 @@ struct PDFViewerScreen: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 28))
                     .foregroundColor(AppTheme.danger)
-                Text("Could not download document")
-                    .font(.system(size: 15, weight: .semibold))
+                Text(isRemoteFile ? "Could not load document" : "Document unavailable")
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
-                Text("Check your connection and Supabase Storage setup.")
-                    .font(.system(size: 13))
+                Text(isRemoteFile ? "Check your connection and try again." : "This document is missing or unreadable. Please ask your tutor to upload it again.")
+                    .appFont(size: 13)
                     .foregroundColor(AppTheme.muted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
+                if isRemoteFile {
+                    Button("Try again") {
+                        Task { await loadDocument() }
+                    }
+                    .buttonStyle(AppSecondaryButtonStyle())
+                    .padding(.horizontal, 24)
+                }
             } else {
                 ProgressView()
                     .tint(AppTheme.brand)
                 Text(isRemoteFile ? "Downloading document…" : "Preparing document…")
-                    .font(.system(size: 14, weight: .medium))
+                    .appFont(size: 14, weight: .medium)
                     .foregroundColor(AppTheme.muted)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func downloadRemotePDFIfNeeded() async {
-        guard remoteCachedURL == nil, let remote = URL(string: fileName) else { return }
+    @MainActor
+    private func loadDocument() async {
+        guard loadedDocument == nil, !isDownloading else { return }
+        isDownloading = true
+        remoteLoadFailed = false
+        defer { isDownloading = false }
         do {
-            let data: Data
-            if SupabaseConfig.isConfigured {
-                data = try await SupabaseClient.shared.downloadData(from: remote)
+            let document: PDFDocument
+            if isRemoteFile, let remote = URL(string: fileName) {
+                let request = SupabaseConfig.isConfigured
+                    ? SupabaseClient.shared.documentDownloadRequest(from: remote)
+                    : URLRequest(url: remote)
+                document = try await DocumentDownloadCache.shared.document(for: request)
+            } else if let url = resolvedURL {
+                document = try await DocumentDownloadCache.shared.localDocument(at: url)
             } else {
-                let (d, _) = try await URLSession.shared.data(from: remote)
-                data = d
+                throw URLError(.fileDoesNotExist)
             }
-            let tmp = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString + ".pdf")
-            try data.write(to: tmp)
-            await MainActor.run {
-                remoteCachedURL = tmp
-            }
+            try Task.checkCancellation()
+            loadedDocument = document
+            recordSuccessfulOpen()
+        } catch is CancellationError {
+            return
         } catch {
-            await MainActor.run {
-                remoteLoadFailed = true
-                // Fall back to generated placeholder
-                generatedURL = PDFGenerator.makeDocument(
-                    title: title,
-                    subject: subjectName,
-                    level: levelRaw,
-                    year: year,
-                    topic: topic,
-                    isPastPaper: isPastPaper
-                )
-            }
+            if !Task.isCancelled { remoteLoadFailed = true }
         }
     }
 
@@ -179,11 +185,11 @@ struct PDFViewerScreen: View {
 // MARK: - PDFKit bridge
 
 struct PDFKitView: UIViewRepresentable {
-    let url: URL
+    let document: PDFDocument
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
-        pdfView.document = PDFDocument(url: url)
+        pdfView.document = document
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
@@ -192,136 +198,97 @@ struct PDFKitView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PDFView, context: Context) {
-        if uiView.document?.documentURL != url {
-            uiView.document = PDFDocument(url: url)
+        if uiView.document !== document {
+            uiView.document = document
         }
     }
 }
 
-// MARK: - On-device PDF generation (when bundle file is missing)
+/// Shared by papers, notes, saved items and library books. File and PDF work
+/// stays on this actor rather than blocking scrolling on the main actor.
+actor DocumentDownloadCache {
+    static let shared = DocumentDownloadCache()
 
-enum PDFGenerator {
-    static func makeDocument(
-        title: String,
-        subject: String,
-        level: String,
-        year: Int?,
-        topic: String,
-        isPastPaper: Bool
-    ) -> URL? {
-        let safeName = title
-            .replacingOccurrences(of: "/", with: "-")
-            .replacingOccurrences(of: " ", with: "_")
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tricon-\(safeName)-\(UUID().uuidString.prefix(8)).pdf")
+    private let directory: URL
+    private let session: URLSession
+    private var downloads: [String: Task<URL, Error>] = [:]
+    private let lifetime: TimeInterval = 7 * 24 * 60 * 60
+    private let sizeLimit = 250 * 1024 * 1024
 
-        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+    init(directory: URL? = nil, session: URLSession = .shared) {
+        self.directory = directory ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Documents", isDirectory: true)
+        self.session = session
+    }
 
-        do {
-            try renderer.writePDF(to: url) { context in
-                context.beginPage()
-                let cg = context.cgContext
+    func localDocument(at url: URL) throws -> PDFDocument {
+        guard let document = PDFDocument(url: url), document.pageCount > 0 else {
+            throw URLError(.cannotDecodeContentData)
+        }
+        return document
+    }
 
-                // Header bar
-                UIColor(red: 0.10, green: 0.68, blue: 0.42, alpha: 1).setFill()
-                cg.fill(CGRect(x: 0, y: 0, width: 612, height: 90))
+    func document(for request: URLRequest) async throws -> PDFDocument {
+        guard let url = request.url else { throw URLError(.badURL) }
+        // Include credentials in the hash so private responses never cross sessions.
+        let identity = url.absoluteString + "\n" + (request.value(forHTTPHeaderField: "Authorization") ?? "")
+            + "\n" + (request.value(forHTTPHeaderField: "apikey") ?? "")
+        let key = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
+        let destination = directory.appendingPathComponent(key + ".pdf")
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: destination.path),
+           let created = attributes[.creationDate] as? Date,
+           Date().timeIntervalSince(created) < lifetime,
+           let document = try? localDocument(at: destination) {
+            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: destination.path)
+            return document
+        }
+        if let download = downloads[key] {
+            return try localDocument(at: await download.value)
+        }
+        let download = Task {
+            try await self.download(request, to: destination)
+        }
+        downloads[key] = download
+        defer { downloads[key] = nil }
+        let file = try await download.value
+        return try localDocument(at: file)
+    }
 
-                let headerAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.9)
-                ]
-                ("TRICON ACADEMY" as NSString).draw(at: CGPoint(x: 40, y: 22), withAttributes: headerAttrs)
+    private func download(_ request: URLRequest, to destination: URL) async throws -> URL {
+        // Stream to disk instead of holding the entire download in a Data buffer.
+        let (temporaryURL, response) = try await session.download(for: request)
+        defer { try? FileManager.default.removeItem(at: temporaryURL) }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        // Never persist an error page or a corrupt document as a successful download.
+        _ = try localDocument(at: temporaryURL)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.moveItem(at: temporaryURL, to: destination)
+        prune(excluding: destination)
+        return destination
+    }
 
-                let titleAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 20, weight: .bold),
-                    .foregroundColor: UIColor.white
-                ]
-                (title as NSString).draw(in: CGRect(x: 40, y: 42, width: 532, height: 36), withAttributes: titleAttrs)
-
-                let meta = [
-                    subject.isEmpty ? "General" : subject,
-                    level.isEmpty ? "All levels" : level,
-                    year.map { String($0) } ?? "",
-                    isPastPaper ? "Past Paper" : "Study Notes"
-                ].filter { !$0.isEmpty }.joined(separator: "  ·  ")
-
-                let bodyAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-                    .foregroundColor: UIColor.darkGray
-                ]
-                (meta as NSString).draw(at: CGPoint(x: 40, y: 110), withAttributes: bodyAttrs)
-
-                let headingAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 15, weight: .bold),
-                    .foregroundColor: UIColor.black
-                ]
-                let textAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 12),
-                    .foregroundColor: UIColor.darkGray
-                ]
-
-                var y: CGFloat = 150
-                if isPastPaper {
-                    ("Instructions" as NSString).draw(at: CGPoint(x: 40, y: y), withAttributes: headingAttrs)
-                    y += 28
-                    let instructions = """
-                    1. Answer all questions in the spaces provided.
-                    2. Show all working clearly for calculation questions.
-                    3. Use a scientific calculator where needed.
-                    4. Time allowed: 2 hours.
-                    5. Read each question carefully before answering.
-                    """
-                    (instructions as NSString).draw(in: CGRect(x: 40, y: y, width: 532, height: 140), withAttributes: textAttrs)
-                    y += 150
-
-                    ("Sample questions" as NSString).draw(at: CGPoint(x: 40, y: y), withAttributes: headingAttrs)
-                    y += 28
-                    let questions = """
-                    1. Define the main concept introduced in this topic and give one real-world example.
-
-                    2. Explain two key principles related to \(subject.isEmpty ? "this subject" : subject) at \(level.isEmpty ? "this level" : level).
-
-                    3. Calculate or reason through a short problem based on the formulas in your notes. Show full working.
-
-                    4. Discuss how this topic connects to previous work in \(subject.isEmpty ? "your course" : subject).
-
-                    5. Write a short paragraph summarizing what you have learned and one area to revise further.
-                    """
-                    (questions as NSString).draw(in: CGRect(x: 40, y: y, width: 532, height: 280), withAttributes: textAttrs)
-                } else {
-                    let topicLine = topic.isEmpty ? "Core revision" : topic
-                    ("Topic: \(topicLine)" as NSString).draw(at: CGPoint(x: 40, y: y), withAttributes: headingAttrs)
-                    y += 28
-                    let notes = """
-                    Overview
-                    These study notes cover the essential ideas for \(subject.isEmpty ? "this subject" : subject) at \(level.isEmpty ? "your level" : level). Use them for revision before tests and exams.
-
-                    Key points
-                    • Review definitions and write them in your own words.
-                    • Practise with worked examples until the method feels natural.
-                    • Link each idea to a past-paper style question.
-                    • Mark anything unclear and revisit it with a tutor or classmate.
-
-                    Revision checklist
-                    □ I can explain the main concepts without notes.
-                    □ I can complete a short practice set in timed conditions.
-                    □ I know the common exam mistakes for this topic.
-                    □ I have saved this note for quick access later.
-                    """
-                    (notes as NSString).draw(in: CGRect(x: 40, y: y, width: 532, height: 420), withAttributes: textAttrs)
+    private func prune(excluding current: URL) {
+        let keys: Set<URLResourceKey> = [.fileSizeKey, .contentModificationDateKey, .creationDateKey]
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: Array(keys), options: .skipsHiddenFiles
+        ) else { return }
+        let entries = files.compactMap { url -> (url: URL, size: Int, accessed: Date, created: Date)? in
+            guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
+            return (url, values.fileSize ?? 0, values.contentModificationDate ?? .distantPast,
+                    values.creationDate ?? .distantPast)
+        }.sorted { $0.accessed < $1.accessed }
+        var total = entries.reduce(0) { $0 + $1.size }
+        for entry in entries where entry.url != current {
+            if total > sizeLimit || Date().timeIntervalSince(entry.created) >= lifetime {
+                if (try? FileManager.default.removeItem(at: entry.url)) != nil {
+                    total -= entry.size
                 }
-
-                let footerAttrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 10),
-                    .foregroundColor: UIColor.gray
-                ]
-                ("Generated by Tricon Academy · For study practice" as NSString)
-                    .draw(at: CGPoint(x: 40, y: 760), withAttributes: footerAttrs)
             }
-            return url
-        } catch {
-            return nil
         }
     }
 }

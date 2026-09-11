@@ -6,6 +6,9 @@ import SwiftUI
 struct SubjectListView: View {
 
     @EnvironmentObject private var authManager: AuthManager
+    @ObservedObject private var library = ContentLibrary.shared
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var searchText = ""
 
     let level: Level
     var initialTab: Int = 0
@@ -17,7 +20,10 @@ struct SubjectListView: View {
     private let brandSoft = AppTheme.brandSoft
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
-    private let muted = AppTheme.muted
+    private let iconGreen = AppTheme.iconGreen
+    private let secondary = AppTheme.secondaryInk
+    private let well = AppTheme.iconWell
+    private let cardLine = AppTheme.cardLine
 
     private var coreSubjects: [Subject] {
         allSubjects.filter { $0.name != "Optionals" }
@@ -31,33 +37,26 @@ struct SubjectListView: View {
         // Tutors: dashboard / browse stay on specialist majors only.
         if !showAllSubjects, authManager.currentUser?.isTutor == true {
             let majors = authManager.currentUser?.managedSubjects ?? []
-            if !majors.isEmpty { return majors }
+            return majors
         }
         var list = coreSubjects
         if let optionalsSubject { list.append(optionalsSubject) }
         return list
     }
 
-    var body: some View {
-        GeometryReader { geo in
-            let hPad: CGFloat = 20
-            let gridGap: CGFloat = 12
-            let headerH: CGFloat = 78
-            let sectionLabelH: CGFloat = 28
-            let topPad: CGFloat = 8
-            let bottomPad: CGFloat = 16
-            let rows = max(1, Int(ceil(Double(subjects.count) / 2.0)))
-            let usedFixed = topPad + headerH + sectionLabelH + bottomPad
-            let gridAvailable = max(260, geo.size.height - usedFixed)
-            let cardH = max(112, (gridAvailable - CGFloat(rows - 1) * gridGap) / CGFloat(rows))
+    private var filteredSubjects: [Subject] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? subjects : subjects.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
 
+    var body: some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                    .frame(height: headerH, alignment: .center)
 
                 Text("Subjects")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(brandDeep)
+                    .appFont(size: 13, weight: .bold)
+                    .foregroundColor(iconGreen)
                     .tracking(0.6)
                     .textCase(.uppercase)
 
@@ -65,38 +64,33 @@ struct SubjectListView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "books.vertical.fill")
                             .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(brandDeep)
+                            .foregroundColor(iconGreen)
+                            .symbolRenderingMode(.monochrome)
                         Text("No specialist subjects")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.headline)
                             .foregroundColor(ink)
                         Text("Set your majors in Settings to browse them by form.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(muted)
+                            .appFont(size: 13, weight: .medium)
+                            .foregroundColor(secondary)
                             .multilineTextAlignment(.center)
                         NavigationLink {
                             SettingsView()
                         } label: {
                             Text("Open Settings")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Capsule().fill(
-                                    LinearGradient(colors: [brand, brandDeep], startPoint: .leading, endPoint: .trailing)
-                                ))
                         }
-                        .buttonStyle(SoftPressStyle())
+                        .buttonStyle(AppPrimaryButtonStyle())
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if filteredSubjects.isEmpty {
+                    AppEmptyState(icon: "magnifyingglass", title: "No subjects found", message: "Try a different subject name.")
+                    Button("Clear search") { searchText = "" }
+                        .buttonStyle(AppSecondaryButtonStyle())
                 } else {
                     LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: gridGap),
-                            GridItem(.flexible(), spacing: gridGap)
-                        ],
-                        spacing: gridGap
+                        columns: dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 145), spacing: 10)],
+                        spacing: 10
                     ) {
-                        ForEach(subjects) { subject in
+                        ForEach(filteredSubjects) { subject in
                             NavigationLink {
                                 if subject.name == "Optionals" {
                                     OptionalsListView(level: level, initialTab: initialTab)
@@ -104,27 +98,28 @@ struct SubjectListView: View {
                                     ContentHubView(level: level, subject: subject, initialTab: initialTab)
                                 }
                             } label: {
-                                subjectCard(subject, height: cardH)
+                                subjectCard(subject)
                             }
                             .buttonStyle(SoftPressStyle())
                         }
                     }
-                    .frame(maxHeight: .infinity, alignment: .top)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, hPad)
-            .padding(.top, topPad)
-            .padding(.bottom, bottomPad)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
+        .searchable(text: $searchText, prompt: "Find a subject")
         .background(brandWash)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text(level.rawValue)
-                    .font(.system(size: 17, weight: .semibold))
+                    .appFont(size: 17, weight: .semibold)
                     .foregroundColor(ink)
             }
         }
@@ -134,7 +129,7 @@ struct SubjectListView: View {
         ZStack {
             canvas.ignoresSafeArea()
             LinearGradient(
-                colors: [brandSoft.opacity(0.55), canvas, canvas],
+                colors: [brandSoft.opacity(0.38), canvas, canvas],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -145,108 +140,91 @@ struct SubjectListView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [brand, brandDeep],
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 52, height: 52)
-                    .shadow(color: brand.opacity(0.28), radius: 12, x: 0, y: 6)
 
                 Text(level.shortLabel)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .appFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundColor(.white)
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(authManager.currentUser?.isTutor == true && !showAllSubjects
-                     ? "Your subjects"
-                     : "Browse subjects")
-                    .font(.system(size: 22, weight: .bold))
+                Text(authManager.currentUser?.isAdmin == true
+                     ? "Subject catalogue"
+                     : (authManager.currentUser?.isTutor == true && !showAllSubjects
+                        ? "Teaching subjects" : "Browse subjects"))
+                    .appFont(size: 22, weight: .bold)
                     .foregroundColor(ink)
-                    .lineLimit(1)
+                    .lineLimit(2)
 
-                Text(authManager.currentUser?.isTutor == true && !showAllSubjects
-                     ? "Specialist courses for \(level.rawValue)"
-                     : "Papers, notes & videos for \(level.rawValue)")
-                    .font(.system(size: 13.5, weight: .medium))
-                    .foregroundColor(muted)
-                    .lineLimit(1)
+                Text(authManager.currentUser?.isAdmin == true
+                     ? "Manage papers, notes and lessons for \(level.rawValue)"
+                     : (authManager.currentUser?.isTutor == true && !showAllSubjects
+                        ? "Specialist courses for \(level.rawValue)"
+                        : "Papers, notes & videos for \(level.rawValue)"))
+                    .appFont(size: 13.5, weight: .medium)
+                    .foregroundColor(secondary)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)
         }
     }
 
-    private func subjectCard(_ subject: Subject, height: CGFloat) -> some View {
+    private func subjectCard(_ subject: Subject) -> some View {
         let counts = contentCounts(for: subject)
-        let total = counts.papers + counts.notes + counts.videos
+        let isOptionals = subject.name == "Optionals"
+        let title = isOptionals ? "Optional Subjects" : subject.name
+        let subtitle = isOptionals
+            ? "Civic · Accounts · RE · CS"
+            : "\(counts.papers) papers · \(counts.notes) notes · \(counts.videos) videos"
 
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(brandSoft)
-                        .frame(width: 44, height: 44)
-                    Image(systemName: subject.icon)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(brandDeep)
-                        .symbolRenderingMode(.hierarchical)
-                }
+        return VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: subject.icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(iconGreen)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(well)
+                )
+                .accessibilityHidden(true)
 
-                Spacer(minLength: 6)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(brand.opacity(0.45))
-                    .padding(7)
-                    .background(Circle().fill(brandSoft.opacity(0.7)))
-            }
-
-            Spacer(minLength: 10)
-
-            Text(subject.name)
-                .font(.system(size: 16, weight: .bold))
+            Text(title)
+                .font(.headline)
                 .foregroundColor(ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.9)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
 
-            Text("\(total) resources")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(muted)
-                .padding(.top, 3)
-
-            HStack(spacing: 6) {
-                metaDot("\(counts.papers)P")
-                metaDot("\(counts.notes)N")
-                metaDot("\(counts.videos)V")
-            }
-            .padding(.top, 10)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(secondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 108, alignment: .topLeading)
+        .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(brand.opacity(0.10), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(cardLine, lineWidth: 1)
         )
-        .shadow(color: brand.opacity(0.06), radius: 14, x: 0, y: 6)
-        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
-    }
-
-    private func metaDot(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 10.5, weight: .bold, design: .rounded))
-            .foregroundColor(brandDeep)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(brandSoft))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle).")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens lessons for this subject")
     }
 
     private func contentCounts(for subject: Subject) -> (papers: Int, notes: Int, videos: Int) {
@@ -254,20 +232,20 @@ struct SubjectListView: View {
             var p = 0, n = 0, v = 0
             for s in optionalSubjects {
                 p += CurriculumData.pastPapers(level: level, subject: s.name).count
-                    + ContentLibrary.shared.papers(level: level, subject: s.name).count
+                    + library.papers(level: level, subject: s.name).count
                 n += CurriculumData.materials(level: level, subject: s.name).count
-                    + ContentLibrary.shared.materials(level: level, subject: s.name).count
+                    + library.materials(level: level, subject: s.name).count
                 v += CurriculumData.videos(level: level, subject: s.name).count
-                    + ContentLibrary.shared.videos(level: level, subject: s.name).count
+                    + library.videos(level: level, subject: s.name).count
             }
             return (p, n, v)
         }
         let papers = CurriculumData.pastPapers(level: level, subject: subject.name).count
-            + ContentLibrary.shared.papers(level: level, subject: subject.name).count
+            + library.papers(level: level, subject: subject.name).count
         let notes = CurriculumData.materials(level: level, subject: subject.name).count
-            + ContentLibrary.shared.materials(level: level, subject: subject.name).count
+            + library.materials(level: level, subject: subject.name).count
         let videos = CurriculumData.videos(level: level, subject: subject.name).count
-            + ContentLibrary.shared.videos(level: level, subject: subject.name).count
+            + library.videos(level: level, subject: subject.name).count
         return (papers, notes, videos)
     }
 }

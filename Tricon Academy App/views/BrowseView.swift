@@ -5,6 +5,7 @@ import SwiftUI
 struct BrowseView: View {
 
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let brand = AppTheme.brand
     private let brandDeep = AppTheme.brandDeep
@@ -12,6 +13,10 @@ struct BrowseView: View {
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
     private let muted = AppTheme.muted
+    private let iconGreen = AppTheme.iconGreen
+    private let secondary = AppTheme.secondaryInk
+    private let well = AppTheme.iconWell
+    private let cardLine = AppTheme.cardLine
 
     private var studentLevel: Level? {
         authManager.currentUser?.studentLevel
@@ -33,33 +38,31 @@ struct BrowseView: View {
         }
     }
 
-    // MARK: - Staff: form picker (uniform brand)
+    // MARK: - Staff: form picker (compact — ~half screen, matches subject grid)
 
     private var staffBrowse: some View {
-        GeometryReader { geo in
-            let hPad: CGFloat = 20
-            let gap: CGFloat = 12
-            let headerH: CGFloat = 88
-            let topPad: CGFloat = 8
-            let bottomPad: CGFloat = 16
-            let levels = Level.activeCases
-            let rows = max(1, Int(ceil(Double(levels.count) / 2.0)))
-            let used = topPad + headerH + bottomPad
-            let gridH = max(260, geo.size.height - used)
-            let cardH = max(120, (gridH - CGFloat(rows - 1) * gap) / CGFloat(rows))
+        // Fixed compact cards: 2×2 grid stays in upper half on all phones.
+        let hPad: CGFloat = 16
+        let gap: CGFloat = 10
+        let cardH: CGFloat = 110
 
-            VStack(alignment: .leading, spacing: 16) {
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
                 staffHeader
-                    .frame(height: headerH, alignment: .top)
+
+                Text("Forms")
+                    .appFont(size: 11, weight: .bold)
+                    .foregroundColor(iconGreen)
+                    .tracking(0.4)
+                    .textCase(.uppercase)
 
                 LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: gap),
-                        GridItem(.flexible(), spacing: gap)
-                    ],
+                    columns: dynamicTypeSize.isAccessibilitySize
+                        ? [GridItem(.flexible())]
+                        : [GridItem(.adaptive(minimum: 145), spacing: gap)],
                     spacing: gap
                 ) {
-                    ForEach(levels) { level in
+                    ForEach(Level.activeCases) { level in
                         NavigationLink {
                             SubjectListView(level: level)
                         } label: {
@@ -68,63 +71,58 @@ struct BrowseView: View {
                         .buttonStyle(SoftPressStyle())
                     }
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, hPad)
-            .padding(.top, topPad)
-            .padding(.bottom, bottomPad)
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .background(brandWash)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Browse")
-                    .font(.system(size: 17, weight: .semibold))
+                Text(authManager.currentUser?.isAdmin == true ? "Curriculum" : "Browse")
+                    .appFont(size: 16, weight: .semibold)
                     .foregroundColor(ink)
             }
         }
     }
 
     private var staffHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [brand, brandDeep],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+        HStack(alignment: .center, spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(width: 48, height: 48)
-                        .shadow(color: brand.opacity(0.28), radius: 10, x: 0, y: 5)
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(isTutor ? "Browse by form" : "Browse curriculum")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(ink)
-                    Text(isTutor
-                         ? "Pick a form to open your specialist subjects"
-                         : "Choose a form, then open a subject")
-                        .font(.system(size: 13.5, weight: .medium))
-                        .foregroundColor(muted)
-                }
+                    )
+                    .frame(width: 40, height: 40)
+                    .shadow(color: brand.opacity(0.2), radius: 5, x: 0, y: 2)
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
             }
 
-            Text("Forms")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(brandDeep)
-                .tracking(0.6)
-                .textCase(.uppercase)
-                .padding(.top, 4)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(isTutor ? "Browse by form" : "Browse curriculum")
+                    .appFont(size: 17, weight: .bold)
+                    .foregroundColor(ink)
+                    .lineLimit(1)
+                Text(isTutor
+                     ? "Open specialist subjects by form"
+                     : "Choose a form, then a subject")
+                    .appFont(size: 12, weight: .medium)
+                    .foregroundColor(secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
         }
     }
 
@@ -132,53 +130,47 @@ struct BrowseView: View {
         if isTutor {
             let n = authManager.currentUser?.managedSubjects.count ?? 0
             if n == 0 { return "Set majors in Settings" }
-            return "\(n) specialist subject\(n == 1 ? "" : "s")"
+            return "\(n) specialist\(n == 1 ? "" : "s")"
         }
         return "\(allSubjects.count) subjects"
     }
 
     private func staffFormCard(_ level: Level, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(brandSoft)
-                        .frame(width: 48, height: 48)
-                    Text(level.shortLabel)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(brandDeep)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(brand.opacity(0.45))
-                    .padding(7)
-                    .background(Circle().fill(brandSoft.opacity(0.7)))
-            }
-
-            Spacer(minLength: 12)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(level.shortLabel)
+                .appFont(size: 13, weight: .bold, design: .rounded)
+                .foregroundColor(iconGreen)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                        .fill(well)
+                )
 
             Text(level.rawValue)
-                .font(.system(size: 18, weight: .bold))
+                .appFont(size: 14.5, weight: .semibold)
                 .foregroundColor(ink)
+                .lineLimit(1)
 
             Text(browseSubjectCountLabel)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(muted)
-                .padding(.top, 4)
+                .appFont(size: 11, weight: .medium)
+                .foregroundColor(secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .topLeading)
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: height, alignment: .topLeading)
+        .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(brand.opacity(0.10), lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(cardLine, lineWidth: 1)
         )
-        .shadow(color: brand.opacity(0.06), radius: 14, x: 0, y: 6)
-        .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(level.rawValue). \(browseSubjectCountLabel).")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Missing form
@@ -197,31 +189,19 @@ struct BrowseView: View {
             }
 
             Text("Set your form")
-                .font(.system(size: 22, weight: .bold))
+                .appFont(size: 22, weight: .bold)
                 .foregroundColor(ink)
 
             Text("Choose Form 1–4 in Settings so we can show the right papers, notes, and videos.")
-                .font(.system(size: 14.5, weight: .medium))
+                .appFont(size: 14.5, weight: .medium)
                 .foregroundColor(muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 36)
 
             NavigationLink(destination: SettingsView()) {
                 Text("Open Settings")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        LinearGradient(
-                            colors: [brand, brandDeep],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(Capsule())
-                    .shadow(color: brand.opacity(0.30), radius: 12, x: 0, y: 6)
             }
+            .buttonStyle(AppPrimaryButtonStyle())
             .padding(.horizontal, 40)
             .padding(.top, 4)
 
@@ -231,8 +211,8 @@ struct BrowseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Browse")
-                    .font(.system(size: 17, weight: .semibold))
+                Text(authManager.currentUser?.isAdmin == true ? "Curriculum" : "Browse")
+                    .appFont(size: 17, weight: .semibold)
                     .foregroundColor(ink)
             }
         }
@@ -242,7 +222,7 @@ struct BrowseView: View {
         ZStack {
             canvas.ignoresSafeArea()
             LinearGradient(
-                colors: [brandSoft.opacity(0.55), canvas, canvas],
+                colors: [brandSoft.opacity(0.38), canvas, canvas],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -256,6 +236,7 @@ struct BrowseView: View {
 struct SubjectLevelPickerView: View {
 
     @EnvironmentObject private var authManager: AuthManager
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let subject: Subject
 
     private let brand = AppTheme.brand
@@ -271,71 +252,87 @@ struct SubjectLevelPickerView: View {
             destination(for: level)
         } else {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
                                 .fill(brandSoft)
-                                .frame(width: 48, height: 48)
+                                .frame(width: 40, height: 40)
                             Image(systemName: subject.icon)
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(brandDeep)
                         }
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 1) {
                             Text("Choose a form")
-                                .font(.system(size: 22, weight: .bold))
+                                .appFont(size: 17, weight: .bold)
                                 .foregroundColor(ink)
-                            Text("Open \(subject.name) for Form 1–4")
-                                .font(.system(size: 13.5, weight: .medium))
+                            Text("Open \(subject.name) · Form 1–4")
+                                .appFont(size: 12, weight: .medium)
                                 .foregroundColor(muted)
+                                .lineLimit(1)
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
+
+                    Text("Forms")
+                        .appFont(size: 11, weight: .bold)
+                        .foregroundColor(brandDeep)
+                        .tracking(0.4)
+                        .textCase(.uppercase)
+                        .padding(.horizontal, 16)
 
                     LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 12),
-                            GridItem(.flexible(), spacing: 12)
-                        ],
-                        spacing: 12
+                        columns: dynamicTypeSize.isAccessibilitySize
+                            ? [GridItem(.flexible())]
+                            : [GridItem(.adaptive(minimum: 145), spacing: 8)],
+                        spacing: 8
                     ) {
                         ForEach(Level.activeCases) { level in
                             NavigationLink {
                                 destination(for: level)
                             } label: {
-                                VStack(alignment: .leading, spacing: 10) {
+                                VStack(alignment: .leading, spacing: 0) {
                                     Text(level.shortLabel)
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .appFont(size: 13, weight: .bold, design: .rounded)
                                         .foregroundColor(brandDeep)
-                                        .frame(width: 40, height: 40)
-                                        .background(RoundedRectangle(cornerRadius: 12).fill(brandSoft))
+                                        .frame(width: 28, height: 28)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                                                .fill(brandSoft)
+                                        )
+
+                                    Spacer(minLength: 8)
+
                                     Text(level.rawValue)
-                                        .font(.system(size: 16, weight: .bold))
+                                        .appFont(size: 14.5, weight: .semibold)
                                         .foregroundColor(ink)
+                                        .lineLimit(1)
                                     Text(subject.name)
-                                        .font(.system(size: 12, weight: .medium))
+                                        .appFont(size: 11, weight: .medium)
                                         .foregroundColor(muted)
                                         .lineLimit(1)
+                                        .padding(.top, 3)
                                 }
-                                .padding(14)
-                                .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                         .fill(AppTheme.card)
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                         .stroke(brand.opacity(0.10), lineWidth: 1)
                                 )
-                                .shadow(color: brand.opacity(0.06), radius: 12, x: 0, y: 5)
+                                .shadow(color: brand.opacity(0.035), radius: 6, x: 0, y: 2)
                             }
                             .buttonStyle(SoftPressStyle())
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                 }
-                .padding(.top, 12)
-                .padding(.bottom, 28)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
             .background(
                 ZStack {

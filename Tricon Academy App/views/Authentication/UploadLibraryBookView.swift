@@ -104,7 +104,7 @@ struct UploadLibraryBookView: View {
             Section {
                 Text(errorMessage)
                     .font(.footnote)
-                    .foregroundColor(.red)
+                    .foregroundColor(AppTheme.danger)
             }
         }
 

@@ -11,8 +11,8 @@ struct ResetPasswordConfirmView: View {
     @State private var isLoading = false
     @State private var succeeded = false
 
-    private let brand = AppTheme.brand
-    private let brandDeep = AppTheme.brandDeep
+    private let blue = AppTheme.authBlue
+    private let blueDeep = AppTheme.authBlueDeep
 
     private var canSubmit: Bool {
         password.count >= 6 && password == confirm && !isLoading
@@ -24,10 +24,10 @@ struct ResetPasswordConfirmView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Set a new password")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .appFont(size: 24, weight: .bold)
                             .foregroundColor(AppTheme.ink)
                         Text("Choose a new password for your Tricon Academy account. You’ll use it the next time you log in.")
-                            .font(.system(size: 14))
+                            .appFont(size: 14)
                             .foregroundColor(AppTheme.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -40,14 +40,14 @@ struct ResetPasswordConfirmView: View {
 
                     if let errorMessage {
                         Text(errorMessage)
-                            .font(.system(size: 13, weight: .medium))
+                            .appFont(size: 13, weight: .medium)
                             .foregroundColor(AppTheme.danger)
                     }
 
                     if succeeded {
                         Label("Password updated. You’re signed in.", systemImage: "checkmark.circle.fill")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(brandDeep)
+                            .foregroundColor(blueDeep)
                     }
 
                     Button {
@@ -61,28 +61,13 @@ struct ResetPasswordConfirmView: View {
                                     .fontWeight(.semibold)
                             }
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                colors: canSubmit ? [brand, brandDeep] : [brand.opacity(0.4), brandDeep.opacity(0.4)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    .buttonStyle(AppPrimaryButtonStyle())
                     .disabled(!canSubmit)
-
-                    Text("Tip: If this screen didn’t open from the email, check Supabase Auth → URL Configuration and add:\n\(SupabaseConfig.authRedirectURL)")
-                        .font(.system(size: 11.5))
-                        .foregroundColor(AppTheme.muted)
-                        .padding(.top, 4)
                 }
                 .padding(22)
             }
-            .background(AppTheme.canvas.ignoresSafeArea())
+            .background(AppTheme.authBlueWash)
             .navigationTitle("Reset password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -99,7 +84,7 @@ struct ResetPasswordConfirmView: View {
     private func secureRow(title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(size: 13, weight: .semibold)
                 .foregroundColor(AppTheme.muted)
             HStack {
                 Group {
@@ -123,12 +108,12 @@ struct ResetPasswordConfirmView: View {
             }
             .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(AppTheme.card)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(AppTheme.stroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                    .stroke(blue.opacity(0.14), lineWidth: 1)
             )
         }
     }

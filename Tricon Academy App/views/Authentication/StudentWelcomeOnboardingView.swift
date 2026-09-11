@@ -1,6 +1,7 @@
-import SwiftUI
+   import SwiftUI
 
 /// Shown once after a student creates an account (or until school info is filled).
+/// Blue subject-style chrome — matches login / register entry flow.
 struct StudentWelcomeOnboardingView: View {
 
     @EnvironmentObject private var authManager: AuthManager
@@ -18,9 +19,9 @@ struct StudentWelcomeOnboardingView: View {
         case school, district
     }
 
-    private let brand = AppTheme.brand
-    private let brandDeep = AppTheme.brandDeep
-    private let brandSoft = AppTheme.brandSoft
+    private let blue = AppTheme.authBlue
+    private let blueDeep = AppTheme.authBlueDeep
+    private let blueSoft = AppTheme.authBlueSoft
     private let canvas = AppTheme.canvas
     private let ink = AppTheme.ink
     private let muted = AppTheme.muted
@@ -35,15 +36,15 @@ struct StudentWelcomeOnboardingView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 header
-                    .padding(.top, 28)
-                    .padding(.bottom, 28)
+                    .padding(.top, 24)
+                    .padding(.bottom, 22)
 
                 formCard
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 18)
 
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.system(size: 13.5, weight: .medium))
+                        .appFont(size: 13.5, weight: .medium)
                         .foregroundColor(AppTheme.danger)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 8)
@@ -59,29 +60,15 @@ struct StudentWelcomeOnboardingView: View {
                                 .tint(.white)
                         } else {
                             Text("Continue to Tricon Academy")
-                                .font(.system(size: 16, weight: .semibold))
+                                .appFont(size: 15.5, weight: .semibold)
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 14, weight: .semibold))
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(
-                        LinearGradient(
-                            colors: canSubmit
-                                ? [brand, brandDeep]
-                                : [Color.gray.opacity(0.35), Color.gray.opacity(0.35)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: canSubmit ? brand.opacity(0.28) : .clear, radius: 12, x: 0, y: 6)
                 }
+                .buttonStyle(AppPrimaryButtonStyle())
                 .disabled(!canSubmit)
-                .buttonStyle(AuthPressStyle())
-                .padding(.bottom, 16)
+                .padding(.bottom, 14)
 
                 Button("Sign out") {
                     authManager.logout()
@@ -90,11 +77,11 @@ struct StudentWelcomeOnboardingView: View {
                 .foregroundColor(muted)
                 .padding(.bottom, 32)
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 20)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 12)
         }
-        .background(canvas.ignoresSafeArea())
+        .background(AppTheme.authBlueWash)
         .onAppear {
             withAnimation(.easeOut(duration: 0.4)) { appeared = true }
             if let g = authManager.currentUser?.grade, let level = Level(rawValue: g), Level.activeCases.contains(level) {
@@ -105,42 +92,42 @@ struct StudentWelcomeOnboardingView: View {
         }
     }
 
-    // MARK: - Header (congratulations)
+    // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(brandSoft)
-                    .frame(width: 96, height: 96)
+                    .fill(blueSoft)
+                    .frame(width: 88, height: 88)
 
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [brand, brandDeep],
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 72, height: 72)
-                    .shadow(color: brand.opacity(0.35), radius: 16, x: 0, y: 8)
+                    .frame(width: 64, height: 64)
+                    .shadow(color: blue.opacity(0.32), radius: 14, x: 0, y: 7)
 
                 Image(systemName: "checkmark")
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white)
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text("Congratulations!")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .appFont(size: 24, weight: .bold)
                     .foregroundColor(ink)
 
                 Text("Welcome to Tricon Academy")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(brandDeep)
+                    .appFont(size: 16, weight: .semibold)
+                    .foregroundColor(blueDeep)
 
                 Text("You’re in. Tell us a bit about your school so we can personalise your learning experience.")
-                    .font(.system(size: 14.5))
+                    .appFont(size: 13.5, weight: .medium)
                     .foregroundColor(muted)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -149,11 +136,11 @@ struct StudentWelcomeOnboardingView: View {
 
             if let name = authManager.currentUser?.fullName, !name.isEmpty {
                 Text(name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(brandDeep)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(Capsule().fill(brandSoft))
+                    .appFont(size: 12.5, weight: .semibold)
+                    .foregroundColor(blueDeep)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(blueSoft))
             }
         }
         .frame(maxWidth: .infinity)
@@ -162,9 +149,9 @@ struct StudentWelcomeOnboardingView: View {
     // MARK: - Form
 
     private var formCard: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Your school details")
-                .font(.system(size: 16, weight: .bold))
+                .appFont(size: 15, weight: .bold)
                 .foregroundColor(ink)
 
             fieldBlock(title: "School name", systemImage: "building.2.fill") {
@@ -184,7 +171,7 @@ struct StudentWelcomeOnboardingView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Label("Your grade / form", systemImage: "graduationcap.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12.5, weight: .semibold))
                     .foregroundColor(muted)
 
                 Picker("Grade", selection: $selectedGrade) {
@@ -195,16 +182,16 @@ struct StudentWelcomeOnboardingView: View {
                 .pickerStyle(.segmented)
             }
         }
-        .padding(18)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(AppTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(blue.opacity(0.12), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 4)
+        .shadow(color: blue.opacity(0.05), radius: 10, x: 0, y: 4)
     }
 
     private func fieldBlock<Content: View>(
@@ -212,23 +199,23 @@ struct StudentWelcomeOnboardingView: View {
         systemImage: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12.5, weight: .semibold))
                 .foregroundColor(muted)
 
             content()
-                .font(.system(size: 16))
+                .font(.system(size: 15))
                 .foregroundColor(ink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                         .fill(canvas)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(AppTheme.stroke, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(blue.opacity(0.12), lineWidth: 1)
                 )
         }
     }

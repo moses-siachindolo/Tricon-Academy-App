@@ -34,23 +34,23 @@ struct LevelTile: View {
     private var gridBody: some View {
         VStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(color.opacity(0.12))
                     .frame(width: 52, height: 52)
 
                 Text(level.shortLabel)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .appFont(size: 17, weight: .bold, design: .rounded)
                     .foregroundColor(color)
             }
 
             VStack(spacing: 3) {
                 Text(level.rawValue)
-                    .font(.system(size: 15, weight: .semibold))
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
                     .lineLimit(1)
 
                 Text(resolvedSubtitle)
-                    .font(.system(size: 12, weight: .medium))
+                    .appFont(size: 12, weight: .medium)
                     .foregroundColor(AppTheme.muted)
                     .lineLimit(1)
             }
@@ -60,11 +60,11 @@ struct LevelTile: View {
         .padding(.vertical, 16)
         .padding(.horizontal, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
         .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
@@ -75,21 +75,21 @@ struct LevelTile: View {
     private var rowBody: some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(color.opacity(0.14))
                     .frame(width: 48, height: 48)
 
                 Text(level.shortLabel)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .appFont(size: 15, weight: .bold, design: .rounded)
                     .foregroundColor(color)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(level.rawValue)
-                    .font(.system(size: 16, weight: .semibold))
+                    .appFont(size: 16, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
                 Text(resolvedSubtitle)
-                    .font(.system(size: 12.5, weight: .medium))
+                    .appFont(size: 12.5, weight: .medium)
                     .foregroundColor(AppTheme.muted)
                     .lineLimit(1)
             }
@@ -103,11 +103,11 @@ struct LevelTile: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
         .shadow(color: AppTheme.shadow, radius: 6, x: 0, y: 2)
@@ -165,10 +165,10 @@ struct LevelPickerHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .appFont(size: 20, weight: .bold, design: .rounded)
                 .foregroundColor(AppTheme.ink)
             Text(subtitle)
-                .font(.system(size: 13.5))
+                .appFont(size: 13.5)
                 .foregroundColor(AppTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }

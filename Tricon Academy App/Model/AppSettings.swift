@@ -1,17 +1,26 @@
 import Foundation
 import Combine
 import SwiftUI
+import UIKit
 
-/// App-wide preferences: light/dark (white/black) appearance.
+/// Single source of truth for Light / Dark appearance across the whole app.
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
-    /// `true` = black (dark) theme, `false` = white (light) theme.
+    /// `true` = Dark, `false` = Light. Persisted and applied immediately.
     @Published var useDarkTheme: Bool {
-        didSet { defaults.set(useDarkTheme, forKey: Keys.darkTheme) }
+        didSet {
+            guard oldValue != useDarkTheme else { return }
+            defaults.set(useDarkTheme, forKey: Keys.darkTheme)
+            applyGlobally()
+        }
     }
 
     var preferredColorScheme: ColorScheme {
+        useDarkTheme ? .dark : .light
+    }
+
+    var interfaceStyle: UIUserInterfaceStyle {
         useDarkTheme ? .dark : .light
     }
 
@@ -22,11 +31,39 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
-        // Default light unless user previously chose dark.
         if defaults.object(forKey: Keys.darkTheme) == nil {
             useDarkTheme = false
         } else {
             useDarkTheme = defaults.bool(forKey: Keys.darkTheme)
+        }
+        applyGlobally()
+    }
+
+    func setDarkTheme(_ on: Bool) {
+        useDarkTheme = on
+    }
+
+    /// Push the chosen style onto every window and UIKit chrome so SwiftUI
+    /// semantic colors and UIAppearance update on the same tap.
+    func applyGlobally() {
+        let style = interfaceStyle
+        let scheme = preferredColorScheme
+        AppChrome.apply(for: scheme)
+
+        let applyToWindows = {
+            for scene in UIApplication.shared.connectedScenes {
+                guard let windowScene = scene as? UIWindowScene else { continue }
+                for window in windowScene.windows {
+                    window.overrideUserInterfaceStyle = style
+                    window.tintColor = UIColor(AppTheme.brand)
+                }
+            }
+        }
+
+        if Thread.isMainThread {
+            applyToWindows()
+        } else {
+            DispatchQueue.main.async(execute: applyToWindows)
         }
     }
 }

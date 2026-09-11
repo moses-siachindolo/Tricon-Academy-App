@@ -5,13 +5,21 @@ struct SavedItemsView: View {
 
     @ObservedObject private var saved = SavedItemsManager.shared
     @State private var filter: Int = 0
+    @State private var searchText = ""
+    @State private var showClearConfirmation = false
 
     private var filtered: [SavedItem] {
-        switch filter {
-        case 1: return saved.items.filter { $0.kind == .paper }
-        case 2: return saved.items.filter { $0.kind == .material }
-        case 3: return saved.items.filter { $0.kind == .video }
-        default: return saved.items
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return saved.items.filter { item in
+            let matchesKind: Bool
+            switch filter {
+            case 1: matchesKind = item.kind == .paper
+            case 2: matchesKind = item.kind == .material
+            case 3: matchesKind = item.kind == .video
+            default: matchesKind = true
+            }
+            return matchesKind && (query.isEmpty ||
+                "\(item.title) \(item.subjectName) \(item.subtitle)".localizedCaseInsensitiveContains(query))
         }
     }
 
@@ -39,7 +47,7 @@ struct SavedItemsView: View {
                 if filtered.isEmpty {
                     AppEmptyState(
                         icon: "bookmark.slash",
-                        title: "Nothing in this filter",
+                        title: searchText.isEmpty ? "Nothing in this filter" : "No saved items found",
                         message: "Try another category, or save more content while browsing.",
                         accent: AppTheme.bookmark,
                         soft: AppTheme.bookmark.opacity(0.14)
@@ -48,10 +56,7 @@ struct SavedItemsView: View {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 10) {
                             ForEach(filtered) { item in
-                                NavigationLink(destination: destination(for: item)) {
-                                    savedRow(item)
-                                }
-                                .buttonStyle(.plain)
+                                savedRow(item)
                             }
                         }
                         .padding(.horizontal, AppTheme.horizontalPadding)
@@ -61,17 +66,24 @@ struct SavedItemsView: View {
             }
         }
         .appScreen()
+        .searchable(text: $searchText, prompt: "Search saved items")
         .navigationTitle("Saved")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !saved.items.isEmpty {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Clear") {
-                        saved.clearAll()
+                    Button("Clear all", role: .destructive) {
+                        showClearConfirmation = true
                     }
                     .foregroundColor(AppTheme.danger)
                 }
             }
+        }
+        .confirmationDialog("Remove all saved items?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
+            Button("Remove all bookmarks", role: .destructive) { saved.clearAll() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Your papers, notes, and videos will still be available in Browse.")
         }
     }
 
@@ -87,51 +99,56 @@ struct SavedItemsView: View {
     }
 
     private func savedRow(_ item: SavedItem) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(soft(for: item.kind))
-                    .frame(width: 46, height: 46)
-                Image(systemName: item.icon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(color(for: item.kind))
-            }
+        HStack(spacing: 0) {
+            NavigationLink(destination: destination(for: item)) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                            .fill(soft(for: item.kind))
+                            .frame(width: 46, height: 46)
+                        Image(systemName: item.icon)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(color(for: item.kind))
+                    }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(AppTheme.ink)
-                    .lineLimit(2)
-                Text("\(item.subjectName) · \(item.subtitle)")
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundColor(AppTheme.muted)
-                    .lineLimit(1)
-            }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(item.title)
+                            .appFont(size: 15, weight: .semibold)
+                            .foregroundColor(AppTheme.ink)
+                            .lineLimit(2)
+                        Text("\(item.subjectName) · \(item.subtitle)")
+                            .appFont(size: 12.5, weight: .medium)
+                            .foregroundColor(AppTheme.muted)
+                            .lineLimit(1)
+                    }
 
-            Spacer(minLength: 4)
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(AppTheme.subtle)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(SoftPressStyle())
 
             Button {
                 saved.remove(id: item.id)
             } label: {
-                Image(systemName: "bookmark.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppTheme.bookmark)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(AppTheme.bookmark.opacity(0.14)))
+                AppIconLabel(systemName: "bookmark.fill", tint: AppTheme.bookmark, fill: AppTheme.bookmark.opacity(0.12))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
+            .accessibilityLabel("Remove \(item.title) from saved items")
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(AppTheme.subtle)
+            // Removal is separate from navigation to avoid accidental opens.
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
         .shadow(color: AppTheme.shadow, radius: 8, x: 0, y: 3)
@@ -164,7 +181,8 @@ struct SavedItemsView: View {
                 contentId: item.id,
                 subjectName: item.subjectName,
                 levelRaw: item.levelRaw,
-                topic: item.kind == .material ? item.subtitle : ""
+                year: item.year,
+                topic: item.kind == .material ? (item.topic ?? item.subtitle) : ""
             )
         case .video:
             VideoPlayerScreen(
@@ -172,9 +190,10 @@ struct SavedItemsView: View {
                 fileExtension: item.fileExtension,
                 title: item.title,
                 contentId: item.id,
-                topic: item.subtitle,
+                topic: item.topic ?? item.subtitle,
                 subjectName: item.subjectName,
-                levelRaw: item.levelRaw
+                levelRaw: item.levelRaw,
+                durationLabel: item.durationLabel ?? "Duration unavailable"
             )
         }
     }

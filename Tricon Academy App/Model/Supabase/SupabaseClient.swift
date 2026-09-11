@@ -587,16 +587,26 @@ final class SupabaseClient {
     }
 
     func downloadData(from remoteURL: URL) async throws -> Data {
-        var request = URLRequest(url: remoteURL)
-        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
+        let request = documentDownloadRequest(from: remoteURL)
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             throw SupabaseError.http(http.statusCode, String(data: data, encoding: .utf8) ?? "")
         }
         return data
+    }
+
+    func documentDownloadRequest(from remoteURL: URL) -> URLRequest {
+        var request = URLRequest(url: remoteURL)
+        // External resources must never receive the user's Supabase credentials.
+        if let projectURL = URL(string: SupabaseConfig.projectURL),
+           remoteURL.scheme == "https", remoteURL.host == projectURL.host,
+           remoteURL.port == projectURL.port {
+            request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+            if let token = accessToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+        }
+        return request
     }
 
     // MARK: - Session persistence

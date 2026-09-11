@@ -17,6 +17,9 @@ struct SavedItem: Identifiable, Codable, Hashable {
     let fileName: String
     let fileExtension: String
     let isPastPaper: Bool
+    var year: Int? = nil
+    var topic: String? = nil
+    var durationLabel: String? = nil
     let dateSaved: Date
 
     var level: Level {
@@ -38,10 +41,11 @@ final class SavedItemsManager: ObservableObject {
 
     @Published private(set) var items: [SavedItem] = []
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let storageKey = "saved.items.v1"
 
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         load()
     }
 
@@ -60,6 +64,7 @@ final class SavedItemsManager: ObservableObject {
             fileName: paper.fileName,
             fileExtension: "pdf",
             isPastPaper: true,
+            year: paper.year,
             dateSaved: Date()
         )
         toggle(item)
@@ -76,6 +81,7 @@ final class SavedItemsManager: ObservableObject {
             fileName: material.fileName,
             fileExtension: "pdf",
             isPastPaper: false,
+            topic: material.topic,
             dateSaved: Date()
         )
         toggle(item)
@@ -92,6 +98,8 @@ final class SavedItemsManager: ObservableObject {
             fileName: video.fileName,
             fileExtension: video.fileExtension,
             isPastPaper: false,
+            topic: video.topic,
+            durationLabel: video.durationLabel,
             dateSaved: Date()
         )
         toggle(item)

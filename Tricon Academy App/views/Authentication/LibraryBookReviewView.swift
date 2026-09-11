@@ -53,7 +53,7 @@ struct LibraryBookReviewView: View {
         List {
             Section {
                 Text("Approve books before they appear for students. Rejected submissions stay hidden.")
-                    .font(.system(size: 13))
+                    .appFont(size: 13)
                     .foregroundColor(AppTheme.muted)
             }
 
@@ -114,10 +114,10 @@ struct LibraryBookReviewView: View {
                 .font(.system(size: 36, weight: .medium))
                 .foregroundColor(AppTheme.brandDeep.opacity(0.7))
             Text(title)
-                .font(.system(size: 17, weight: .semibold))
+                .appFont(size: 17, weight: .semibold)
                 .foregroundColor(AppTheme.ink)
             Text(message)
-                .font(.system(size: 14))
+                .appFont(size: 14)
                 .foregroundColor(AppTheme.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
@@ -158,32 +158,34 @@ private struct LibraryBookReviewRow: View {
     }
 
     private var coverIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(book.category.accent.opacity(0.14))
-                .frame(width: 44, height: 56)
-            Image(systemName: "book.fill")
-                .foregroundColor(book.category.accent)
-        }
+        Image(systemName: "book.fill")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(AppTheme.iconGreen)
+            .symbolRenderingMode(.monochrome)
+            .frame(width: 44, height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                    .fill(AppTheme.iconWell)
+            )
     }
 
     private var bookInfo: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(book.title)
-                .font(.system(size: 15, weight: .semibold))
+                .appFont(size: 15, weight: .semibold)
                 .foregroundColor(AppTheme.ink)
             Text(book.author)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(AppTheme.muted)
+                .appFont(size: 13, weight: .medium)
+                .foregroundColor(AppTheme.secondaryInk)
             Text(metaLine)
-                .font(.system(size: 12))
-                .foregroundColor(AppTheme.muted)
+                .appFont(size: 12)
+                .foregroundColor(AppTheme.secondaryInk)
             Text(uploaderLine)
-                .font(.system(size: 12, weight: .medium))
+                .appFont(size: 12, weight: .medium)
                 .foregroundColor(AppTheme.brandDeep)
             if !book.summary.isEmpty {
                 Text(book.summary)
-                    .font(.system(size: 12.5))
+                    .appFont(size: 12.5)
                     .foregroundColor(AppTheme.muted)
                     .lineLimit(3)
             }
@@ -196,23 +198,23 @@ private struct LibraryBookReviewRow: View {
                 Label("Approve", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 40)
+                    .frame(minHeight: 48)
                     .background(AppTheme.brandSoft)
                     .foregroundColor(AppTheme.brandDeep)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
 
             Button(action: onReject) {
                 Label("Reject", systemImage: "xmark.circle")
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Color.red.opacity(0.1))
+                    .frame(minHeight: 48)
+                    .background(AppTheme.dangerSoft)
                     .foregroundColor(AppTheme.danger)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(SoftPressStyle())
         }
     }
 }

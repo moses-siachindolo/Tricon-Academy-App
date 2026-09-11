@@ -44,10 +44,6 @@
 		A9C10001200C000100059F79 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10000200C000100059F79 /* AppSettings.swift */; };
 		A9C10003200C000200059F79 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C10002200C000200059F79 /* SettingsView.swift */; };
 		A9D100012016000100059F79 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9D100002016000100059F79 /* DesignSystem.swift */; };
-		A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20000200E000100059F79 /* SupabaseConfig.swift */; };
-		A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20002200E000200059F79 /* SupabaseClient.swift */; };
-		A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20004200E000300059F79 /* SupabaseModels.swift */; };
-		A9S30001200F000100059F79 /* ResetPasswordConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */; };
 		A9L400012010000100059F79 /* LevelPickerComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L400002010000100059F79 /* LevelPickerComponents.swift */; };
 		A9L500012011000100059F79 /* LibraryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L500002011000100059F79 /* LibraryModels.swift */; };
 		A9L500032011000200059F79 /* TriconAcademyLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */; };
@@ -59,6 +55,10 @@
 		A9L900012015000100059F79 /* LibraryBookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9L900002015000100059F79 /* LibraryBookStore.swift */; };
 		A9LB00012016000100059F79 /* UploadLibraryBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9LB00002016000100059F79 /* UploadLibraryBookView.swift */; };
 		A9LB00032016000200059F79 /* LibraryBookReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9LB00022016000200059F79 /* LibraryBookReviewView.swift */; };
+		A9S20001200E000100059F79 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20000200E000100059F79 /* SupabaseConfig.swift */; };
+		A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20002200E000200059F79 /* SupabaseClient.swift */; };
+		A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20004200E000300059F79 /* SupabaseModels.swift */; };
+		A9S30001200F000100059F79 /* ResetPasswordConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,11 +120,6 @@
 		A9C10000200C000100059F79 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A9C10002200C000200059F79 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A9D100002016000100059F79 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
-		A9S20000200E000100059F79 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
-		A9S20002200E000200059F79 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
-		A9S20004200E000300059F79 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
-		A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordConfirmView.swift; sourceTree = "<group>"; };
-		A9S30002200F000200059F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A9L400002010000100059F79 /* LevelPickerComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelPickerComponents.swift; sourceTree = "<group>"; };
 		A9L500002011000100059F79 /* LibraryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModels.swift; sourceTree = "<group>"; };
 		A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriconAcademyLibraryView.swift; sourceTree = "<group>"; };
@@ -136,6 +131,11 @@
 		A9L900002015000100059F79 /* LibraryBookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookStore.swift; sourceTree = "<group>"; };
 		A9LB00002016000100059F79 /* UploadLibraryBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadLibraryBookView.swift; sourceTree = "<group>"; };
 		A9LB00022016000200059F79 /* LibraryBookReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBookReviewView.swift; sourceTree = "<group>"; };
+		A9S20000200E000100059F79 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		A9S20002200E000200059F79 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		A9S20004200E000300059F79 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
+		A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordConfirmView.swift; sourceTree = "<group>"; };
+		A9S30002200F000200059F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -251,16 +251,6 @@
 			path = Model;
 			sourceTree = "<group>";
 		};
-		A9S20006200E000400059F79 /* Supabase */ = {
-			isa = PBXGroup;
-			children = (
-				A9S20000200E000100059F79 /* SupabaseConfig.swift */,
-				A9S20002200E000200059F79 /* SupabaseClient.swift */,
-				A9S20004200E000300059F79 /* SupabaseModels.swift */,
-			);
-			path = Supabase;
-			sourceTree = "<group>";
-		};
 		A65408592FF9BFD800FE3C33 /* views */ = {
 			isa = PBXGroup;
 			children = (
@@ -270,8 +260,8 @@
 				A6B1C0023003A00200059F79 /* ProfileView.swift */,
 				A9C10002200C000200059F79 /* SettingsView.swift */,
 				A9D100002016000100059F79 /* DesignSystem.swift */,
-				A9L400002010000100059F79 /* LevelPickerComponents.swift */,
 				A9L500022011000200059F79 /* TriconAcademyLibraryView.swift */,
+				A9L400002010000100059F79 /* LevelPickerComponents.swift */,
 				A609457F2FFAF1D5000482FF /* SubjectListView.swift */,
 				A60945812FFAF2D8000482FF /* ContentHubView.swift */,
 				A60945832FFAF330000482FF /* PDFViewerScreen.swift */,
@@ -304,6 +294,16 @@
 				A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */,
 			);
 			path = Authentication;
+			sourceTree = "<group>";
+		};
+		A9S20006200E000400059F79 /* Supabase */ = {
+			isa = PBXGroup;
+			children = (
+				A9S20000200E000100059F79 /* SupabaseConfig.swift */,
+				A9S20002200E000200059F79 /* SupabaseClient.swift */,
+				A9S20004200E000300059F79 /* SupabaseModels.swift */,
+			);
+			path = Supabase;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

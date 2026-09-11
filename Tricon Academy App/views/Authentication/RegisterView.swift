@@ -25,15 +25,15 @@ struct RegisterView: View {
         case firstName, lastName, email, password, confirmPassword
     }
 
-    // MARK: - Palette
+    // MARK: - Palette (entry green — independent of post-login blue brand)
 
-    private let canvas = Color.white
-    private let ink = Color.black
-    private let mutedIcon = Color(red: 0.45, green: 0.45, blue: 0.48)
-    private let fieldFill = Color(red: 0.965, green: 0.965, blue: 0.97)
+    private let canvas = AppTheme.canvas
+    private let ink = AppTheme.ink
+    private let mutedIcon = AppTheme.secondaryInk
+    private let fieldFill = AppTheme.field
     private let brand = AppTheme.brand
-    private let brandDeep = Color(red: 0.04, green: 0.36, blue: 0.26)
-    private let danger = Color(red: 0.85, green: 0.22, blue: 0.20)
+    private let brandDeep = AppTheme.brandDeep
+    private let danger = AppTheme.danger
 
     private var fullName: String {
         [firstName, lastName]
@@ -66,13 +66,13 @@ struct RegisterView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        Text("Create your\naccount")
-                            .font(.system(size: 36, weight: .bold))
+                        Text("Create account")
+                            .appFont(size: 26, weight: .semibold)
                             .foregroundColor(ink)
                             .multilineTextAlignment(.center)
-                            .lineSpacing(2)
-                            .padding(.top, 24)
-                            .padding(.bottom, 40)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
+                            .padding(.bottom, 20)
 
                         VStack(spacing: 14) {
                             minimalField(
@@ -125,7 +125,7 @@ struct RegisterView: View {
 
                         if let errorMessage {
                             Text(errorMessage)
-                                .font(.system(size: 13.5, weight: .medium))
+                                .appFont(size: 13.5, weight: .medium)
                                 .foregroundColor(danger)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
@@ -142,41 +142,26 @@ struct RegisterView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 } else {
                                     Text("Create Account")
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundColor(.white)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                LinearGradient(
-                                    colors: canSubmit
-                                        ? [brand, brandDeep]
-                                        : [brand.opacity(0.55), brandDeep.opacity(0.55)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .clipShape(Capsule())
-                            .shadow(color: canSubmit ? brand.opacity(0.35) : .clear, radius: 12, x: 0, y: 6)
                         }
-                        .buttonStyle(AuthPressStyle())
+                        .buttonStyle(AppPrimaryButtonStyle())
                         .disabled(!canSubmit)
-                        .padding(.top, 28)
+                        .padding(.top, 22)
 
                         VStack(spacing: 6) {
                             Text("Already have an account?")
-                                .font(.system(size: 15))
+                                .appFont(size: 15)
                                 .foregroundColor(ink)
 
                             NavigationLink(destination: LoginView()) {
                                 Text("Log In")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .appFont(size: 15, weight: .bold)
                                     .foregroundColor(brand)
                                     .underline()
                             }
                         }
-                        .padding(.top, 28)
+                        .padding(.top, 20)
 
                         // Role switch at bottom (menu)
                         Menu {
@@ -194,15 +179,16 @@ struct RegisterView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Text("Signing up as \(selectedRole.displayName)")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .appFont(size: 14, weight: .semibold)
                                 Image(systemName: "chevron.up.chevron.down")
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .foregroundColor(brand)
                         }
-                        .padding(.top, 28)
+                        .padding(.top, 20)
+                        .padding(.bottom, 24)
 
-                        Spacer(minLength: 48)
+                        Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 28)
                     .frame(minHeight: geo.size.height, alignment: .top)
@@ -225,7 +211,7 @@ struct RegisterView: View {
 
     private func fieldHint(_ message: String) -> some View {
         Text(message)
-            .font(.system(size: 12.5, weight: .medium))
+            .appFont(size: 12.5, weight: .medium)
             .foregroundColor(danger)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 6)
@@ -251,11 +237,11 @@ struct RegisterView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .fill(fieldFill)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                     .stroke(
                         focusedField == field ? ink.opacity(0.16) : Color.clear,
                         lineWidth: 1
@@ -287,20 +273,20 @@ struct RegisterView: View {
             Button {
                 isVisible.wrappedValue.toggle()
             } label: {
-                Image(systemName: isVisible.wrappedValue ? "eye.slash" : "eye")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(mutedIcon)
+                AppIconLabel(systemName: isVisible.wrappedValue ? "eye.slash" : "eye",
+                             tint: AppTheme.secondaryInk, fill: AppTheme.fill)
             }
+            .buttonStyle(SoftPressStyle())
             .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(fieldFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .stroke(
                     focusedField == field ? ink.opacity(0.16) : Color.clear,
                     lineWidth: 1
@@ -364,14 +350,7 @@ struct RegisterView: View {
 
 // MARK: - Shared UI bits
 
-struct AuthPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.9 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.65), value: configuration.isPressed)
-    }
-}
+typealias AuthPressStyle = SoftPressStyle
 
 struct RegisterView_Previews: PreviewProvider {
     static var previews: some View {

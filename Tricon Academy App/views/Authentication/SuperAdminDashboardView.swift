@@ -1,5 +1,12 @@
 import SwiftUI
 
+private extension RemoteProfile {
+    var tutorSubjectsSummary: String {
+        let subjects = asUser.managedSubjectNames
+        return subjects.isEmpty ? "No subjects assigned" : subjects.joined(separator: " · ")
+    }
+}
+
 // MARK: - Super Admin Dashboard
 
 /// Platform overview for role `admin` only: pupils, tutors, all accounts, block/remove/revoke.
@@ -83,12 +90,12 @@ struct SuperAdminDashboardView: View {
                             ForEach(subjectRequests) { profile in
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(profile.fullName)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .appFont(size: 14, weight: .semibold)
                                     Text("Requesting: \(profile.pendingSubjectRequest ?? "—")")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .appFont(size: 12, weight: .medium)
                                         .foregroundColor(AppTheme.brandDeep)
                                     Text("Current majors: \(profile.subjectMajor ?? "—")")
-                                        .font(.system(size: 11.5))
+                                        .appFont(size: 11.5)
                                         .foregroundColor(AppTheme.muted)
                                     HStack(spacing: 8) {
                                         Button("Approve") {
@@ -128,7 +135,7 @@ struct SuperAdminDashboardView: View {
                     Section {
                         if filtered.isEmpty {
                             Text(emptyCopy)
-                                .font(.system(size: 14))
+                                .appFont(size: 14)
                                 .foregroundColor(AppTheme.muted)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding(.vertical, 24)
@@ -173,22 +180,22 @@ struct SuperAdminDashboardView: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 statCard(title: "Pupils", value: "\(students.count)", icon: "person.3.fill", color: AppTheme.brand)
-                statCard(title: "Tutors", value: "\(tutors.count)", icon: "person.badge.shield.checkmark.fill", color: Color(red: 0.20, green: 0.48, blue: 0.92))
-                statCard(title: "Total", value: "\(profiles.count)", icon: "person.2.fill", color: Color(red: 0.52, green: 0.32, blue: 0.88))
+                statCard(title: "Tutors", value: "\(tutors.count)", icon: "person.badge.shield.checkmark.fill", color: AppTheme.papers)
+                statCard(title: "Total", value: "\(profiles.count)", icon: "person.2.fill", color: AppTheme.videos)
             }
             if !pendingTutors.isEmpty {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.bubble.fill")
-                        .foregroundColor(Color(red: 0.95, green: 0.48, blue: 0.18))
+                        .foregroundColor(AppTheme.warning)
                     Text("\(pendingTutors.count) tutor application\(pendingTutors.count == 1 ? "" : "s") awaiting your approval")
-                        .font(.system(size: 13, weight: .semibold))
+                        .appFont(size: 13, weight: .semibold)
                         .foregroundColor(AppTheme.ink)
                     Spacer()
                 }
                 .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(red: 0.95, green: 0.48, blue: 0.18).opacity(0.12))
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.warning.opacity(0.12))
                 )
             }
         }
@@ -200,20 +207,20 @@ struct SuperAdminDashboardView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(color)
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .appFont(size: 22, weight: .bold, design: .rounded)
                 .foregroundColor(AppTheme.ink)
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .appFont(size: 11, weight: .medium)
                 .foregroundColor(AppTheme.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
     }
@@ -225,19 +232,19 @@ struct SuperAdminDashboardView: View {
                     .fill(roleColor(profile.userRole).opacity(0.14))
                     .frame(width: 44, height: 44)
                 Text(initials(profile.fullName))
-                    .font(.system(size: 14, weight: .bold))
+                    .appFont(size: 14, weight: .bold)
                     .foregroundColor(roleColor(profile.userRole))
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(profile.fullName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .appFont(size: 15, weight: .semibold)
                         .foregroundColor(AppTheme.ink)
                         .lineLimit(1)
                     if profile.isAccountBlocked {
                         Text("Blocked")
-                            .font(.system(size: 10, weight: .bold))
+                            .appFont(size: 10, weight: .bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -245,21 +252,28 @@ struct SuperAdminDashboardView: View {
                     } else if profile.userRole == .tutor,
                               profile.tutorApprovalStatus == TutorApprovalStatus.pending.rawValue {
                         Text("Pending")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.white)
+                            .appFont(size: 10, weight: .bold)
+                            .foregroundColor(AppTheme.warning)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(red: 0.95, green: 0.48, blue: 0.18)))
+                            .background(Capsule().fill(AppTheme.warning.opacity(0.12)))
                     }
                 }
                 Text(profile.email)
-                    .font(.system(size: 12.5))
+                    .appFont(size: 12.5)
                     .foregroundColor(AppTheme.muted)
                     .lineLimit(1)
 
+                if profile.userRole == .tutor {
+                    Label("Subjects: \(profile.tutorSubjectsSummary)", systemImage: "books.vertical.fill")
+                        .appFont(size: 12.5)
+                        .foregroundColor(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 HStack(spacing: 6) {
                     Text(profile.userRole.displayName)
-                        .font(.system(size: 11, weight: .semibold))
+                        .appFont(size: 11, weight: .semibold)
                         .foregroundColor(roleColor(profile.userRole))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -267,12 +281,12 @@ struct SuperAdminDashboardView: View {
 
                     if profile.userRole == .student, let grade = profile.grade, !grade.isEmpty {
                         Text(grade)
-                            .font(.system(size: 11.5))
+                            .appFont(size: 11.5)
                             .foregroundColor(AppTheme.muted)
                     }
                     if let school = profile.school, !school.isEmpty {
                         Text(school)
-                            .font(.system(size: 11.5))
+                            .appFont(size: 11.5)
                             .foregroundColor(AppTheme.muted)
                             .lineLimit(1)
                     }
@@ -284,8 +298,8 @@ struct SuperAdminDashboardView: View {
 
     private func roleColor(_ role: UserRole) -> Color {
         switch role {
-        case .admin: return Color(red: 0.95, green: 0.48, blue: 0.18)
-        case .tutor: return Color(red: 0.20, green: 0.48, blue: 0.92)
+        case .admin: return AppTheme.warning
+        case .tutor: return AppTheme.papers
         case .student: return AppTheme.brand
         }
     }
@@ -301,7 +315,7 @@ struct SuperAdminDashboardView: View {
                 .font(.system(size: 28))
                 .foregroundColor(AppTheme.danger)
             Text(message)
-                .font(.system(size: 14))
+                .appFont(size: 14)
                 .foregroundColor(AppTheme.muted)
                 .multilineTextAlignment(.center)
             Button("Retry") { Task { await load() } }
@@ -416,7 +430,7 @@ struct SuperAdminAccountDetailView: View {
                         infoRow(icon: "building.columns.fill", label: "Last institution", value: workingProfile.lastInstitution ?? "Not provided")
                         infoRow(icon: "person.fill", label: "Gender", value: workingProfile.gender ?? "Not provided")
                         infoRow(icon: "mappin.and.ellipse", label: "Location / address", value: workingProfile.addressLocation ?? "Not provided")
-                        infoRow(icon: "function", label: "Subject major", value: workingProfile.subjectMajor ?? "Not provided")
+                        infoRow(icon: "books.vertical.fill", label: "Subjects", value: workingProfile.tutorSubjectsSummary)
                         infoRow(icon: "person.2.fill", label: "Reference contacts", value: workingProfile.referenceContacts ?? "Not provided")
                         if let note = workingProfile.adminStatusReason, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             infoRow(icon: "text.bubble.fill", label: "Admin note", value: note)
@@ -431,22 +445,22 @@ struct SuperAdminAccountDetailView: View {
                 if canManage {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Admin actions")
-                            .font(.system(size: 15, weight: .bold))
+                            .appFont(size: 15, weight: .bold)
                             .foregroundColor(AppTheme.ink)
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Reason for reject / block (required)")
-                                .font(.system(size: 12, weight: .semibold))
+                                .appFont(size: 12, weight: .semibold)
                                 .foregroundColor(AppTheme.muted)
                             TextField("e.g. Too many tutors for this subject right now", text: $adminReason)
                                 .font(.system(size: 14))
                                 .padding(12)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                         .fill(AppTheme.canvas)
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                                         .stroke(AppTheme.stroke, lineWidth: 1)
                                 )
                         }
@@ -465,7 +479,7 @@ struct SuperAdminAccountDetailView: View {
                                 actionButton(
                                     title: "Reject application",
                                     systemImage: "xmark.circle.fill",
-                                    tint: Color(red: 0.95, green: 0.48, blue: 0.18)
+                                    tint: AppTheme.warning
                                 ) { confirmRejectTutor = true }
                             }
                         }
@@ -480,7 +494,7 @@ struct SuperAdminAccountDetailView: View {
                             actionButton(
                                 title: "Block account",
                                 systemImage: "hand.raised.fill",
-                                tint: Color(red: 0.95, green: 0.48, blue: 0.18)
+                                tint: AppTheme.warning
                             ) { confirmBlock = true }
                         }
 
@@ -489,7 +503,7 @@ struct SuperAdminAccountDetailView: View {
                             actionButton(
                                 title: "Remove tutor access",
                                 systemImage: "person.badge.minus",
-                                tint: Color(red: 0.20, green: 0.48, blue: 0.92)
+                                tint: AppTheme.papers
                             ) { confirmRevokeTutor = true }
                         }
 
@@ -504,14 +518,14 @@ struct SuperAdminAccountDetailView: View {
                     Text(workingProfile.userRole == .admin
                          ? "Admin accounts are protected from these actions."
                          : "You cannot manage your own account from this screen.")
-                        .font(.system(size: 13))
+                        .appFont(size: 13)
                         .foregroundColor(AppTheme.muted)
                         .padding(.top, 4)
                 }
 
                 if let actionError {
                     Text(actionError)
-                        .font(.system(size: 13.5, weight: .medium))
+                        .appFont(size: 13.5, weight: .medium)
                         .foregroundColor(AppTheme.danger)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -592,21 +606,21 @@ struct SuperAdminAccountDetailView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [AppTheme.brand, AppTheme.brandDeep],
+                            colors: [AppTheme.brand, AppTheme.brandFillDeep],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 84, height: 84)
                 Text(initials(workingProfile.fullName))
-                    .font(.system(size: 28, weight: .bold))
+                    .appFont(size: 28, weight: .bold)
                     .foregroundColor(.white)
             }
             Text(workingProfile.fullName)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .appFont(size: 22, weight: .bold, design: .rounded)
                 .foregroundColor(AppTheme.ink)
             Text(workingProfile.userRole.displayName)
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(size: 13, weight: .semibold)
                 .foregroundColor(AppTheme.brandDeep)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
@@ -618,18 +632,18 @@ struct SuperAdminAccountDetailView: View {
     private func infoCard(title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 15, weight: .bold))
+                .appFont(size: 15, weight: .bold)
                 .foregroundColor(AppTheme.ink)
             content()
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .fill(AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
                 .stroke(AppTheme.stroke, lineWidth: 1)
         )
     }
@@ -642,10 +656,10 @@ struct SuperAdminAccountDetailView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .appFont(size: 12, weight: .medium)
                     .foregroundColor(AppTheme.muted)
                 Text(value)
-                    .font(.system(size: 15, weight: .semibold))
+                    .appFont(size: 15, weight: .semibold)
                     .foregroundColor(AppTheme.ink)
             }
             Spacer(minLength: 0)
@@ -658,12 +672,12 @@ struct SuperAdminAccountDetailView: View {
             Label(title, systemImage: systemImage)
                 .font(.system(size: 15, weight: .semibold))
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 .background(tint.opacity(0.12))
                 .foregroundColor(tint)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SoftPressStyle())
     }
 
     private func initials(_ name: String) -> String {

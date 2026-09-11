@@ -6,28 +6,17 @@ import UIKit
 enum AppChrome {
     /// Call when the app launches or the user switches light/dark so system bars stay readable.
     static func apply(for scheme: ColorScheme) {
-        let isDark = scheme == .dark
-
-        let canvas = isDark
-            ? UIColor(red: 0.04, green: 0.045, blue: 0.05, alpha: 1)
-            : UIColor(red: 0.955, green: 0.962, blue: 0.968, alpha: 1)
-        let card = isDark
-            ? UIColor(red: 0.11, green: 0.12, blue: 0.13, alpha: 1)
-            : UIColor.white
-        let ink = isDark
-            ? UIColor(red: 0.98, green: 0.985, blue: 0.99, alpha: 1)
-            : UIColor(red: 0.04, green: 0.06, blue: 0.07, alpha: 1)
-        let brand = UIColor(red: 0.07, green: 0.58, blue: 0.36, alpha: 1)
+        let brand = UIColor(AppTheme.brandBright)
 
         let nav = UINavigationBarAppearance()
-        nav.configureWithOpaqueBackground()
-        nav.backgroundColor = canvas
+        nav.configureWithDefaultBackground()
+        nav.backgroundColor = .systemBackground
         nav.titleTextAttributes = [
-            .foregroundColor: ink,
+            .foregroundColor: UIColor.label,
             .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
         ]
         nav.largeTitleTextAttributes = [
-            .foregroundColor: ink,
+            .foregroundColor: UIColor.label,
             .font: UIFont.systemFont(ofSize: 32, weight: .bold)
         ]
         nav.shadowColor = .clear
@@ -36,22 +25,23 @@ enum AppChrome {
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
         UINavigationBar.appearance().tintColor = brand
+        UINavigationBar.appearance().barTintColor = .systemBackground
 
         let tab = UITabBarAppearance()
-        tab.configureWithOpaqueBackground()
-        tab.backgroundColor = card
-        tab.shadowColor = isDark
-            ? UIColor.white.withAlphaComponent(0.10)
-            : UIColor.black.withAlphaComponent(0.08)
+        tab.configureWithDefaultBackground()
+        tab.backgroundColor = .secondarySystemBackground
+        tab.shadowColor = UIColor.separator
 
         let item = UITabBarItemAppearance()
-        let normal = isDark
-            ? UIColor(red: 0.62, green: 0.65, blue: 0.64, alpha: 1)
-            : UIColor(red: 0.38, green: 0.42, blue: 0.44, alpha: 1)
-        item.normal.iconColor = normal
-        item.normal.titleTextAttributes = [.foregroundColor: normal]
+        item.normal.iconColor = .secondaryLabel
+        item.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.secondaryLabel
+        ]
         item.selected.iconColor = brand
-        item.selected.titleTextAttributes = [.foregroundColor: brand]
+        item.selected.titleTextAttributes = [
+            .foregroundColor: brand,
+            .font: UIFont.systemFont(ofSize: 11, weight: .semibold)
+        ]
         tab.stackedLayoutAppearance = item
         tab.inlineLayoutAppearance = item
         tab.compactInlineLayoutAppearance = item
@@ -61,19 +51,23 @@ enum AppChrome {
             UITabBar.appearance().scrollEdgeAppearance = tab
         }
         UITabBar.appearance().tintColor = brand
-        UITabBar.appearance().unselectedItemTintColor = normal
+        UITabBar.appearance().unselectedItemTintColor = .secondaryLabel
+        UITabBar.appearance().barTintColor = .secondarySystemBackground
 
-        UISegmentedControl.appearance().selectedSegmentTintColor = brand
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(AppTheme.brand)
         UISegmentedControl.appearance().setTitleTextAttributes(
             [.foregroundColor: UIColor.white, .font: UIFont.systemFont(ofSize: 13, weight: .semibold)],
             for: .selected
         )
         UISegmentedControl.appearance().setTitleTextAttributes(
-            [.foregroundColor: ink, .font: UIFont.systemFont(ofSize: 13, weight: .medium)],
+            [.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: 13, weight: .medium)],
             for: .normal
         )
 
         UITextField.appearance().tintColor = brand
+        UITableView.appearance().backgroundColor = .systemBackground
+        UIScrollView.appearance().indicatorStyle = scheme == .dark ? .white : .black
+        _ = scheme
     }
 }
 
@@ -134,11 +128,11 @@ struct AppEmptyState: View {
                     .accessibilityHidden(true)
             }
             Text(title)
-                .font(.system(size: 18, weight: .bold))
+                .appFont(size: 18, weight: .bold)
                 .foregroundColor(AppTheme.ink)
                 .multilineTextAlignment(.center)
             Text(message)
-                .font(.system(size: 14.5))
+                .appFont(size: 14.5)
                 .foregroundColor(AppTheme.muted)
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
@@ -155,6 +149,7 @@ struct AppEmptyState: View {
 
 /// Icon + label tabs used on subject hubs and saved filters.
 struct ContentTypeSelector: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var selection: Int
     var tabs: [ContentTypeTab]
     /// When true (default), tabs share width evenly. Use false for horizontal scroll chips.
@@ -170,6 +165,19 @@ struct ContentTypeSelector: View {
     }
 
     var body: some View {
+        if equalWidth && !dynamicTypeSize.isAccessibilitySize {
+            ViewThatFits(in: .horizontal) {
+                tabRow
+                ScrollView(.horizontal, showsIndicators: false) { tabRow.fixedSize(horizontal: true, vertical: false) }
+            }
+        } else if equalWidth {
+            ScrollView(.horizontal, showsIndicators: false) { tabRow }
+        } else {
+            tabRow
+        }
+    }
+
+    private var tabRow: some View {
         HStack(spacing: 8) {
             ForEach(tabs) { tab in
                 Button {
@@ -179,7 +187,7 @@ struct ContentTypeSelector: View {
                 } label: {
                     pill(tab, selected: selection == tab.id)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SoftPressStyle())
                 .accessibilityAddTraits(selection == tab.id ? .isSelected : [])
             }
         }
@@ -189,32 +197,36 @@ struct ContentTypeSelector: View {
         HStack(spacing: 6) {
             Image(systemName: tab.icon)
                 .font(.system(size: 13, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
             Text(tab.title)
-                .font(.system(size: 13, weight: .semibold))
+                .appFont(size: 13, weight: .semibold)
                 .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             if let count = tab.count, count > 0 {
                 Text("\(count)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(selected ? tab.color : AppTheme.subtle)
+                    .appFont(size: 11, weight: .bold, design: .rounded)
+                    .foregroundColor(selected ? tab.color : AppTheme.secondaryInk)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(
-                        Capsule().fill(selected ? tab.soft.opacity(0.9) : AppTheme.fill)
+                        Capsule().fill(selected ? tab.soft : AppTheme.fill)
                     )
             }
         }
-        .foregroundColor(selected ? tab.color : AppTheme.muted)
-        .padding(.vertical, 11)
+        .foregroundColor(selected ? tab.color : AppTheme.secondaryInk)
+        .padding(.vertical, 12)
         .padding(.horizontal, equalWidth ? 6 : 12)
         .frame(maxWidth: equalWidth ? .infinity : nil)
+        .contentShape(Rectangle())
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
                 .fill(selected ? tab.soft : AppTheme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(selected ? tab.color.opacity(0.35) : AppTheme.stroke, lineWidth: selected ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(selected ? tab.color.opacity(0.40) : AppTheme.cardLine, lineWidth: 1)
         )
+        .accessibilityLabel(tab.count.map { "\(tab.title), \($0)" } ?? tab.title)
     }
 
     /// Standard Papers / Notes / Videos trio for subject hubs.
@@ -261,7 +273,7 @@ struct SectionChip: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 11, weight: .bold))
+            .appFont(size: 11, weight: .bold)
             .foregroundColor(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -272,55 +284,109 @@ struct SectionChip: View {
 // MARK: - Primary / secondary buttons
 
 struct AppPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var enabled: Bool = true
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(AppTheme.onBrand)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(
-                LinearGradient(
-                    colors: enabled
-                        ? [AppTheme.brand, AppTheme.brand.opacity(0.85)]
-                        : [AppTheme.brand.opacity(0.40), AppTheme.brand.opacity(0.35)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
-            .shadow(color: enabled ? AppTheme.brand.opacity(0.28) : .clear, radius: 12, x: 0, y: 6)
-            .scaleEffect(configuration.isPressed && enabled ? 0.98 : 1)
-            .opacity(configuration.isPressed && enabled ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+        let active = enabled && isEnabled
+        return configuration.label
+            .appFont(size: 16, weight: .semibold)
+            .multilineTextAlignment(.center)
+            .foregroundColor(active ? AppTheme.onBrand : AppTheme.muted)
+            .tint(active ? AppTheme.onBrand : AppTheme.muted)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background {
+                RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: active ? [AppTheme.brand, AppTheme.brandFillDeep] : [AppTheme.fill, AppTheme.fill],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+            }
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
+            .shadow(color: active ? AppTheme.shadow : .clear, radius: 6, x: 0, y: 3)
+            .scaleEffect(configuration.isPressed && active && !reduceMotion ? 0.98 : 1)
+            .opacity(configuration.isPressed && active ? 0.88 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
 struct AppSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(AppTheme.brandDeep)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(AppTheme.brandSoft)
+            .appFont(size: 15, weight: .semibold)
+            .multilineTextAlignment(.center)
+            .foregroundColor(isEnabled ? AppTheme.brandDeep : AppTheme.muted)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .background(isEnabled ? AppTheme.brandSoft : AppTheme.fill)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
-                    .stroke(AppTheme.brand.opacity(0.22), lineWidth: 1)
+                    .strokeBorder(AppTheme.cardLine, lineWidth: 1)
             )
-            .opacity(configuration.isPressed ? 0.88 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
+            .opacity(configuration.isPressed && isEnabled ? 0.82 : 1)
+    }
+}
+
+/// A consistent 44-point target for standalone bookmark, delete and utility icons.
+struct AppIconLabel: View {
+    let systemName: String
+    var tint: Color = AppTheme.brandDeep
+    var fill: Color = AppTheme.brandSoft
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .semibold))
+            .symbolRenderingMode(.monochrome)
+            .foregroundColor(tint)
+            .frame(width: AppTheme.minimumTapTarget, height: AppTheme.minimumTapTarget)
+            .background(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous).fill(fill))
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                .strokeBorder(tint.opacity(0.16), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous))
     }
 }
 
 // MARK: - Press feedback for tiles
 
 struct SoftPressStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && isEnabled && !reduceMotion ? 0.98 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.86 : 1) : 0.5)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+// Scale the shared typography with the reader's preferred text size.
+private struct AppFontModifier: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    let weight: Font.Weight
+    let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: .body)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
+extension View {
+    func appFont(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
+        modifier(AppFontModifier(size: size, weight: weight, design: design))
     }
 }
