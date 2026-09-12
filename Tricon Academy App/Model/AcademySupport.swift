@@ -11,5 +11,5 @@ enum AcademySupport {
     static let emailURL = URL(string: "mailto:\(email)?subject=Tutor%20approval%20follow-up")
 
     static let approvalWaitMessage =
-        "A super admin reviews every tutor application. If your account is not approved within 2 days, call \(phoneDisplay) or email \(email)."
+        "If you have not received a decision after 2 days, contact the academy team. Call \(phoneDisplay) or email \(email)."
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Primary Browse tab: students land on their registered form only;
-/// tutors pick a form then see specialist majors; admins see full catalogue.
+/// tutors pick a form then see specialist majors.
 struct BrowseView: View {
 
     @EnvironmentObject private var authManager: AuthManager
@@ -84,7 +84,7 @@ struct BrowseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(authManager.currentUser?.isAdmin == true ? "Curriculum" : "Browse")
+                Text("Browse")
                     .appFont(size: 16, weight: .semibold)
                     .foregroundColor(ink)
             }
@@ -110,7 +110,7 @@ struct BrowseView: View {
             }
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(isTutor ? "Browse by form" : "Browse curriculum")
+                Text("Browse by form")
                     .appFont(size: 17, weight: .bold)
                     .foregroundColor(ink)
                     .lineLimit(1)
@@ -211,7 +211,7 @@ struct BrowseView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(authManager.currentUser?.isAdmin == true ? "Curriculum" : "Browse")
+                Text("Browse")
                     .appFont(size: 17, weight: .semibold)
                     .foregroundColor(ink)
             }

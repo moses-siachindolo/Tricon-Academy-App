@@ -4,6 +4,7 @@ import SwiftUI
 struct Tricon_Academy_App: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var authManager = AuthManager.shared
+    @StateObject private var liveClasses = LiveClassesStore.shared
     @StateObject private var appSettings = AppSettings.shared
 
     var body: some Scene {
@@ -36,6 +37,8 @@ struct Tricon_Academy_App: App {
             .environmentObject(appSettings)
             .preferredColorScheme(appSettings.preferredColorScheme)
             .onAppear {
+                LiveNotificationManager.shared.install()
+                LiveNotificationManager.shared.openLesson = { liveClasses.pendingLessonID = $0 }
                 appSettings.applyGlobally()
             }
             .onChange(of: appSettings.useDarkTheme) { _ in
@@ -46,8 +49,22 @@ struct Tricon_Academy_App: App {
                     StatsManager.shared.recordAppActive()
                 }
             }
+            .task(id: "\(scenePhase == .active)-\(authManager.currentUser?.id.uuidString ?? "signed-out")") {
+                if scenePhase == .active && authManager.isLoggedIn {
+                    await authManager.monitorAccountAccess()
+                }
+            }
+            .task(id: "live-\(scenePhase)-\(authManager.currentUser?.id.uuidString ?? "signed-out")") {
+                liveClasses.setAccount(authManager.currentUser?.id)
+                guard scenePhase == .active, authManager.isLoggedIn else { return }
+                while !Task.isCancelled {
+                    await liveClasses.refresh()
+                    do { try await Task.sleep(nanoseconds: 30_000_000_000) } catch { break }
+                }
+            }
             .onOpenURL { url in
-                authManager.handleOpenURL(url)
+                if let id = LiveLesson.lessonID(from: url) { liveClasses.pendingLessonID = id }
+                else if url.host != "live" { authManager.handleOpenURL(url) }
             }
             .sheet(isPresented: $authManager.needsPasswordResetCompletion) {
                 ResetPasswordConfirmView()
@@ -56,15 +73,21 @@ struct Tricon_Academy_App: App {
                     .preferredColorScheme(appSettings.preferredColorScheme)
             }
             .alert(
-                "Reset link",
+                authManager.accountAccessMessage == nil ? "Reset link" : "Account access",
                 isPresented: Binding(
-                    get: { authManager.deepLinkError != nil },
-                    set: { if !$0 { authManager.deepLinkError = nil } }
+                    get: { authManager.accountAccessMessage != nil || authManager.deepLinkError != nil },
+                    set: { if !$0 {
+                        authManager.accountAccessMessage = nil
+                        authManager.deepLinkError = nil
+                    } }
                 )
             ) {
-                Button("OK", role: .cancel) { authManager.deepLinkError = nil }
+                Button("OK", role: .cancel) {
+                    authManager.accountAccessMessage = nil
+                    authManager.deepLinkError = nil
+                }
             } message: {
-                Text(authManager.deepLinkError ?? "")
+                Text(authManager.accountAccessMessage ?? authManager.deepLinkError ?? "")
             }
         }
     }

@@ -60,3 +60,14 @@ Shared UI polish verification on an iPhone/simulator:
 - Check larger accessibility text sizes: primary actions and admin action rows should grow vertically without clipping. Check Reduce Motion: shared button press feedback should avoid scaling.
 
 The Swift files were syntax-checked locally. Native visual verification and an iOS build require full Xcode, which is not installed on this Mac.
+
+
+Account restriction checks:
+
+```sh
+python3 tests/run_account_access_regressions.py
+```
+
+This harness exercises the production profile-check and restriction-message methods with deterministic server responses: block/remove logout with an administrator reason, a missing profile, offline preservation, Remember me preservation, cancellation, and a stale response after an account switch. It does not exercise a live Supabase project or SwiftUI alert presentation.
+
+On two devices, keep a student/tutor signed in on one and block or remove that account as an administrator on the other. With the affected app active and online, confirm automatic logout and the Account access message after the next check (five seconds between completed checks, plus network time). Repeat with a PDF, a video, an upload sheet, and a pending-tutor screen open. Background the affected app, restrict the account, then foreground it: a check should run immediately. Test offline: the existing session remains usable until a successful check confirms the restriction after reconnection. Verify that signing in again is rejected while the restriction remains, and that unblocking permits a new login.

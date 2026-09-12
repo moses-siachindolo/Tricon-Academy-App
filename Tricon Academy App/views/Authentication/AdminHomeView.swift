@@ -250,7 +250,7 @@ struct AdminHomeView: View {
         await bookStore.refreshFromCloud()
     }
 
-    // Admins manage the academy catalogue; they do not have assigned subjects.
+    // Admins manage publishing and accounts; they do not have assigned subjects.
     private var adminDashboard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -258,46 +258,9 @@ struct AdminHomeView: View {
 
                 if showsOverview {
                     adminOverview
-                } else {
-                    contentActions
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    adminSectionTitle("Curriculum", detail: "All forms · all subjects")
-                    LazyVGrid(columns: adminColumns, spacing: 12) {
-                        ForEach(Level.activeCases) { level in
-                            NavigationLink {
-                                SubjectListView(level: level)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 14) {
-                                    HStack {
-                                        Image(systemName: "folder.fill")
-                                            .foregroundColor(AppTheme.brandDeep)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundColor(AppTheme.muted)
-                                    }
-                                    Text(level.rawValue)
-                                        .appFont(size: 18, weight: .bold)
-                                        .foregroundColor(AppTheme.ink)
-                                    Text("Manage subjects and resources")
-                                        .appFont(size: 13)
-                                        .foregroundColor(AppTheme.secondaryInk)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .padding(16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .appCard(elevated: false)
-                            }
-                            .buttonStyle(SoftPressStyle())
-                        }
-                    }
-                }
-
-                if showsOverview {
-                    contentActions
-                }
+                contentActions
 
                 if !library.items.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -356,7 +319,7 @@ struct AdminHomeView: View {
                 .foregroundColor(AppTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Text(showsOverview
-                 ? "Oversee the curriculum, review submissions and manage academy accounts."
+                 ? "Review submissions and manage academy accounts."
                  : "Publish learning resources and organise content across every form and subject.")
                 .appFont(size: 15)
                 .foregroundColor(AppTheme.secondaryInk)

@@ -177,18 +177,20 @@ struct ProfileView: View {
                 }
                 .buttonStyle(SoftPressStyle())
 
-                Divider()
-                    .padding(.leading, 62)
+                if user?.isStudent == true {
+                    Divider()
+                        .padding(.leading, 62)
 
-                NavigationLink(destination: SavedItemsView()) {
-                    shortcutRow(
-                        icon: "bookmark.fill",
-                        title: "Saved resources",
-                        subtitle: savedSubtitle,
-                        badge: savedCount > 0 ? "\(savedCount)" : nil
-                    )
+                    NavigationLink(destination: SavedItemsView()) {
+                        shortcutRow(
+                            icon: "bookmark.fill",
+                            title: "Saved resources",
+                            subtitle: savedSubtitle,
+                            badge: savedCount > 0 ? "\(savedCount)" : nil
+                        )
+                    }
+                    .buttonStyle(SoftPressStyle())
                 }
-                .buttonStyle(SoftPressStyle())
             }
             .background(cardBackground)
         }

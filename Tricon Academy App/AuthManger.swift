@@ -161,6 +161,7 @@ class AuthManager: ObservableObject {
 
     @Published var currentUser: User? {
         didSet {
+            if oldValue?.id != currentUser?.id { authGeneration += 1 }
             SavedItemsManager.shared.setUser(currentUser?.id)
         }
     }
@@ -169,6 +170,8 @@ class AuthManager: ObservableObject {
     /// True after user opens a password-recovery deep link; show set-new-password UI.
     @Published var needsPasswordResetCompletion: Bool = false
     @Published var deepLinkError: String?
+    @Published var accountAccessMessage: String?
+    private var authGeneration = 0
 
     private let sessionKeychainKey = "com.triconacademy.session"
     private let accountsKeychainKey = "com.triconacademy.accounts"
@@ -227,6 +230,10 @@ class AuthManager: ObservableObject {
                     fallbackName: session.user.email?.components(separatedBy: "@").first ?? "User",
                     role: .student
                 )
+                if let message = accessDeniedMessage(for: profile) {
+                    signOutForAccountRestriction(message)
+                    return .failure(.remote(message))
+                }
                 saveSession(user: profile.asUser, persist: true)
                 Task.detached(priority: .utility) {
                     await ContentLibrary.shared.refreshFromCloud()
@@ -254,8 +261,8 @@ class AuthManager: ObservableObject {
                 fallbackName: session.user.email?.components(separatedBy: "@").first ?? "User",
                 role: .student
             )
-            if accessDeniedMessage(for: profile) != nil {
-                client.clearSession()
+            if let message = accessDeniedMessage(for: profile) {
+                signOutForAccountRestriction(message)
                 return
             }
             saveSession(user: profile.asUser, persist: true)
@@ -1086,32 +1093,61 @@ class AuthManager: ObservableObject {
         return .success(())
     }
 
-    /// Pull latest profile for the signed-in user (e.g. after admin approval).
+    /// Runs only while the app is active; the root view cancels it on logout/backgrounding.
+    func monitorAccountAccess() async {
+        while !Task.isCancelled, isLoggedIn {
+            await refreshCurrentUserProfile()
+            guard !Task.isCancelled, isLoggedIn else { return }
+            do {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+            } catch { return }
+        }
+    }
+
+    /// Pull latest profile for the signed-in user, including administrative restrictions.
     func refreshCurrentUserProfile() async {
         guard let user = currentUser else { return }
+        let generation = authGeneration
         if client.isConfigured {
             do {
                 try await ensureValidCloudSession(forceRefresh: false)
-                let profile: RemoteProfile = try await client.select(
+                let profiles: [RemoteProfile] = try await client.select(
                     table: "profiles",
-                    query: "id=eq.\(user.id.uuidString)&select=*",
-                    single: true
+                    query: "id=eq.\(user.id.uuidString)&select=*"
                 )
-                if accessDeniedMessage(for: profile) != nil {
-                    logout()
+                guard !Task.isCancelled, generation == authGeneration,
+                      currentUser?.id == user.id else { return }
+                guard let profile = profiles.first else {
+                    signOutForAccountRestriction("Your account is no longer available. Contact Tricon Academy for help.")
                     return
                 }
-                saveSession(user: profile.asUser, persist: true)
+                if let message = accessDeniedMessage(for: profile) {
+                    signOutForAccountRestriction(message)
+                    return
+                }
+                // Refresh visible details without changing the user's Remember me choice.
+                let remember = readFromKeychain(key: sessionKeychainKey) != nil
+                saveSession(user: profile.asUser, persist: remember)
             } catch {
-                // Keep existing session
+                // A connection failure is not evidence that an account was blocked.
             }
         } else if let account = loadAccounts().first(where: { $0.id == user.id }) {
-            if account.isAccessDenied {
-                logout()
+            if let message = accessDeniedMessage(for: account.asRemoteProfile) {
+                signOutForAccountRestriction(message)
                 return
             }
-            saveSession(user: account.asUser, persist: true)
+            let remember = readFromKeychain(key: sessionKeychainKey) != nil
+            saveSession(user: account.asUser, persist: remember)
         }
+    }
+
+    private func signOutForAccountRestriction(_ message: String) {
+        // Clear credentials synchronously so an old request cannot sign the user back in.
+        client.clearSession()
+        clearLocalLoginState()
+        needsPasswordResetCompletion = false
+        deepLinkError = nil
+        accountAccessMessage = message + "\n\nYou have been signed out."
     }
 
     /// Super-admin: strip tutor privileges (role → student).
@@ -1367,6 +1403,7 @@ class AuthManager: ObservableObject {
                 currentUser = user
                 isLoggedIn = true
             }
+            let generation = authGeneration
             do {
                 // Access tokens expire (~1h). Refresh before any profile call so cold
                 // launches don't leave the user "logged in" with a dead JWT.
@@ -1381,9 +1418,9 @@ class AuthManager: ObservableObject {
                     fallbackName: session.user.email?.components(separatedBy: "@").first ?? "User",
                     role: .student
                 )
-                if accessDeniedMessage(for: profile) != nil {
-                    await client.signOut()
-                    clearLocalLoginState()
+                guard generation == authGeneration else { return }
+                if let message = accessDeniedMessage(for: profile) {
+                    signOutForAccountRestriction(message)
                     return
                 }
                 saveSession(user: profile.asUser, persist: true)
@@ -1392,6 +1429,7 @@ class AuthManager: ObservableObject {
                 }
                 return
             } catch {
+                guard generation == authGeneration else { return }
                 // Auth-hard failures → force re-login. Transient network → keep cached user
                 // and let the next API call refresh again.
                 if isHardAuthFailure(error) {
@@ -1413,8 +1451,9 @@ class AuthManager: ObservableObject {
            let user = try? JSONDecoder().decode(User.self, from: data) {
             // Local mode: re-check block/remove flags on stored accounts.
             if !client.isConfigured {
-                if let account = loadAccounts().first(where: { $0.id == user.id }), account.isAccessDenied {
-                    clearLocalLoginState()
+                if let account = loadAccounts().first(where: { $0.id == user.id }),
+                   let message = accessDeniedMessage(for: account.asRemoteProfile) {
+                    signOutForAccountRestriction(message)
                     return
                 }
                 currentUser = user

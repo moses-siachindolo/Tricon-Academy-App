@@ -143,6 +143,7 @@ struct HomeView: View {
         return ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 26) {
                 studentHeader
+                LiveHomeCard()
                 studentSubjectsSection
                 studentLibraryRow
                 Spacer(minLength: 0)
@@ -657,16 +658,16 @@ struct HomeView: View {
                         selectedTab = 2
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "bookmark.fill")
+                            Image(systemName: "video.fill")
                                 .font(.system(size: 13, weight: .semibold))
-                            Text("Saved")
+                            Text("Live Lessons")
                                 .appFont(size: 13, weight: .semibold)
                         }
-                        .foregroundColor(AppTheme.bookmark)
+                        .foregroundColor(AppTheme.brandBright)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(
-                            Capsule().fill(AppTheme.bookmark.opacity(0.14))
+                            Capsule().fill(AppTheme.brandBright.opacity(0.14))
                         )
                     }
                     .buttonStyle(SoftPressStyle())
