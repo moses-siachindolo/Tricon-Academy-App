@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Tutor application (after registration)
 
-/// Tutor applications are reviewed by the academy team before access is granted.
+/// Who can be a tutor: anyone who registers as Tutor, then passes super-admin verification.
 /// Blue subject-style chrome — matches login / register entry flow.
 struct TutorApplicationView: View {
 
@@ -17,6 +17,7 @@ struct TutorApplicationView: View {
     @State private var referenceContacts = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var appeared = false
     @State private var loadedDetails = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -61,7 +62,7 @@ struct TutorApplicationView: View {
                     .padding(.top, 18)
                     .padding(.bottom, 18)
 
-                applicationSections
+                formCard
                     .disabled(isLoading)
                     .padding(.bottom, 14)
 
@@ -77,23 +78,19 @@ struct TutorApplicationView: View {
                     Task { await submit() }
                 } label: {
                     HStack(spacing: 8) {
-                        if isLoading { ProgressView().tint(.white) }
-                        Text(isLoading ? "Submitting…" : "Submit application")
-                            .appFont(size: 15.5, weight: .semibold)
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Submit for approval")
+                                .appFont(size: 15.5, weight: .semibold)
+                        }
                     }
                 }
                 .buttonStyle(AppPrimaryButtonStyle())
                 .disabled(!canSubmit)
                 .padding(.bottom, 12)
 
-                Text("Complete all sections and select at least one subject to submit.")
-                    .appFont(size: 12.5)
-                    .foregroundColor(AppTheme.muted)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 16)
-
                 Button("Sign out") { authManager.logout() }
-                    .disabled(isLoading)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(AppTheme.muted)
                     .padding(.bottom, 28)
@@ -101,10 +98,12 @@ struct TutorApplicationView: View {
             .padding(.horizontal, 20)
             .frame(maxWidth: 680)
             .frame(maxWidth: .infinity)
+            .opacity(appeared ? 1 : 0)
         }
         .background(AppTheme.authBlueWash)
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
+            withAnimation(.easeOut(duration: 0.35)) { appeared = true }
             guard !loadedDetails, let user = authManager.currentUser else { return }
             loadedDetails = true
             phone = user.phone ?? ""
@@ -129,7 +128,7 @@ struct TutorApplicationView: View {
             Text("Tutor verification")
                 .appFont(size: 22, weight: .bold)
                 .foregroundColor(AppTheme.ink)
-            Text("Tell us about your qualifications and the subjects you teach. The team at the academy will review your application before you receive tutor access.")
+            Text("Anyone can apply to teach on Tricon Academy. A super admin must verify your details before you get tutor access.")
                 .appFont(size: 13.5, weight: .medium)
                 .foregroundColor(AppTheme.muted)
                 .multilineTextAlignment(.center)
@@ -137,150 +136,111 @@ struct TutorApplicationView: View {
         }
     }
 
-    private var applicationSections: some View {
-        VStack(spacing: 18) {
-            contactSection
-            educationSection
-            subjectsSection
-            referencesSection
-        }
-    }
+    private var formCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Your details")
+                .appFont(size: 15, weight: .bold)
+                .foregroundColor(AppTheme.ink)
 
-    private var contactSection: some View {
-        TutorApplicationSection(
-            number: "01", title: "Personal details",
-            subtitle: "How the academy can contact you."
-        ) {
-            labeledField("Phone number") {
-                TextField("e.g. 0976 123 456", text: $phone)
+            labeledField("Phone number", "e.g. 0976…") {
+                TextField("Phone number", text: $phone)
                     .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
             }
-            labeledField("Town / district or address") {
-                TextField("Enter your location", text: $addressLocation)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Highest education attained")
+                    .appFont(size: 12.5, weight: .semibold)
+                    .foregroundColor(AppTheme.muted)
+                Picker("Education", selection: $highestEducation) {
+                    Text("Select…").tag("")
+                    ForEach(educationLevels, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(fieldBackground)
+            }
+
+            labeledField("University or school last attended", "Institution name") {
+                TextField("Last institution", text: $lastInstitution)
                     .textInputAutocapitalization(.words)
             }
-            labeledField("Gender") {
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Gender")
+                    .appFont(size: 12.5, weight: .semibold)
+                    .foregroundColor(AppTheme.muted)
                 Picker("Gender", selection: $gender) {
                     ForEach(genders, id: \.self) { Text($0).tag($0) }
                 }
                 .pickerStyle(.menu)
-                .tint(blueDeep)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-    }
 
-    private var educationSection: some View {
-        TutorApplicationSection(
-            number: "02", title: "Education & qualifications",
-            subtitle: "Share your highest qualification and last institution."
-        ) {
-            labeledField("Highest qualification") {
-                Picker("Highest qualification", selection: $highestEducation) {
-                    Text("Select a qualification").tag("")
-                    ForEach(educationLevels, id: \.self) { Text($0).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .tint(blueDeep)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            labeledField("Last school, college or university") {
-                TextField("Enter institution name", text: $lastInstitution)
+            labeledField("Location / address", "Town, district, or full address") {
+                TextField("Location or address", text: $addressLocation)
                     .textInputAutocapitalization(.words)
             }
-        }
-    }
 
-    private var subjectsSection: some View {
-        TutorApplicationSection(
-            number: "03", title: "Teaching subjects",
-            subtitle: "Select the subjects you are qualified to teach. You can choose more than one."
-        ) {
-            subjectGroup("Core subjects", subjects: coreSubjectChoices)
-            Divider()
-            subjectGroup("Optional subjects", subjects: optionalSubjectChoices)
-            VStack(alignment: .leading, spacing: 6) {
-                Label(selectionSummary, systemImage: "checkmark.circle")
-                    .appFont(size: 13, weight: .semibold)
-                    .foregroundColor(blueDeep)
-                Text("Your approved subjects determine which lessons and resources you can manage.")
-                    .appFont(size: 12.5)
-                    .foregroundColor(AppTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(blueSoft)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius))
-        }
-    }
-
-    private var coreSubjectChoices: [Subject] {
-        allSubjects.filter { $0.name != "Optionals" }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-    }
-
-    private var optionalSubjectChoices: [Subject] {
-        optionalSubjects.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-    }
-
-    private var selectionSummary: String {
-        switch selectedSubjects.count {
-        case 0: return "Choose at least one subject"
-        case 1: return "1 subject selected"
-        default: return "\(selectedSubjects.count) subjects selected"
-        }
-    }
-
-    private var subjectColumns: [GridItem] {
-        if dynamicTypeSize.isAccessibilitySize { return [GridItem(.flexible())] }
-        return [GridItem(.adaptive(minimum: 240), spacing: 10)]
-    }
-
-    private func subjectGroup(_ title: String, subjects: [Subject]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .appFont(size: 13, weight: .semibold)
-                .foregroundColor(AppTheme.muted)
-            LazyVGrid(columns: subjectColumns, spacing: 10) {
-                ForEach(subjects) { subject in
-                    TutorSubjectChoice(
-                        subject: subject,
-                        isSelected: selectedSubjects.contains(subject.name)
-                    ) {
-                        if selectedSubjects.contains(subject.name) {
-                            selectedSubjects.remove(subject.name)
-                        } else {
-                            selectedSubjects.insert(subject.name)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var referencesSection: some View {
-        TutorApplicationSection(
-            number: "04", title: "References",
-            subtitle: "Provide a name, role and phone number or email for someone who can confirm your qualifications or teaching experience."
-        ) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Reference details")
+                Text("Specialist subjects")
                     .appFont(size: 12.5, weight: .semibold)
                     .foregroundColor(AppTheme.muted)
+                Text("Pick the course(s) you teach. You may upload and delete only for these; every other subject stays view-only.")
+                    .appFont(size: 12)
+                    .foregroundColor(AppTheme.muted.opacity(0.9))
+                LazyVGrid(columns: dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(catalogueSubjects, id: \.self) { name in
+                        let on = selectedSubjects.contains(name)
+                        Button {
+                            if on { selectedSubjects.remove(name) } else { selectedSubjects.insert(name) }
+                        } label: {
+                            Text(name)
+                                .appFont(size: 12.5, weight: .semibold)
+                                .foregroundColor(on ? .white : AppTheme.ink)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .frame(minHeight: 44)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppTheme.iconRadius, style: .continuous)
+                                        .fill(on ? blueDeep : AppTheme.stroke)
+                                )
+                        }
+                        .buttonStyle(SoftPressStyle())
+                        .accessibilityAddTraits(on ? .isSelected : [])
+                    }
+                }
+                if !selectedSubjects.isEmpty {
+                    Text("Selected: \(subjectMajorValue)")
+                        .appFont(size: 12, weight: .medium)
+                        .foregroundColor(blueDeep)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Reference contacts")
+                    .appFont(size: 12.5, weight: .semibold)
+                    .foregroundColor(AppTheme.muted)
+                Text("Names, roles, and phone/email of people or authorities who can confirm your details.")
+                    .appFont(size: 12)
+                    .foregroundColor(AppTheme.muted.opacity(0.9))
                 TextEditor(text: $referenceContacts)
-                    .font(.system(size: 15))
-                    .frame(minHeight: 130)
-                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 100)
                     .padding(10)
                     .background(fieldBackground)
-                    .accessibilityLabel("Reference details")
-                Text("Please make sure your reference is happy to be contacted.")
-                    .appFont(size: 12.5)
-                    .foregroundColor(AppTheme.muted)
+                    .scrollContentBackground(.hidden)
             }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .fill(AppTheme.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                .stroke(blue.opacity(0.12), lineWidth: 1)
+        )
     }
 
     private var fieldBackground: some View {
@@ -294,6 +254,7 @@ struct TutorApplicationView: View {
 
     private func labeledField<Content: View>(
         _ title: String,
+        _ placeholder: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -301,7 +262,6 @@ struct TutorApplicationView: View {
                 .appFont(size: 12.5, weight: .semibold)
                 .foregroundColor(AppTheme.muted)
             content()
-                .accessibilityLabel(title)
                 .font(.system(size: 15))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
@@ -311,10 +271,9 @@ struct TutorApplicationView: View {
 
     @MainActor
     private func submit() async {
-        guard !isLoading else { return }
         errorMessage = nil
         guard canSubmit else {
-            errorMessage = "Complete all sections and select at least one teaching subject."
+            errorMessage = "Please fill in every field."
             return
         }
         isLoading = true
@@ -335,89 +294,7 @@ struct TutorApplicationView: View {
     }
 }
 
-private struct TutorApplicationSection<Content: View>: View {
-    let number: String
-    let title: String
-    let subtitle: String
-    let content: Content
-
-    init(number: String, title: String, subtitle: String, @ViewBuilder content: () -> Content) {
-        self.number = number
-        self.title = title
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 12) {
-                Text(number)
-                    .appFont(size: 12, weight: .bold)
-                    .foregroundColor(AppTheme.authBlueDeep)
-                    .padding(10)
-                    .background(AppTheme.authBlueSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title)
-                        .appFont(size: 17, weight: .bold)
-                        .foregroundColor(AppTheme.ink)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(subtitle)
-                        .appFont(size: 13)
-                        .foregroundColor(AppTheme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            content
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard(elevated: false)
-    }
-}
-
-private struct TutorSubjectChoice: View {
-    let subject: Subject
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: subject.icon)
-                    .font(.system(size: 19, weight: .medium))
-                    .frame(width: 26)
-                    .accessibilityHidden(true)
-                Text(subject.name)
-                    .appFont(size: 14, weight: .semibold)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 4)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 21))
-                    .accessibilityHidden(true)
-            }
-            .foregroundColor(isSelected ? AppTheme.authBlueDeep : AppTheme.ink)
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-            .background(isSelected ? AppTheme.authBlueSoft : AppTheme.canvas)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: AppTheme.controlRadius)
-                    .stroke(isSelected ? AppTheme.authBlue : AppTheme.stroke, lineWidth: isSelected ? 1.5 : 1)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius))
-        }
-        .buttonStyle(SoftPressStyle())
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint("Double tap to \(isSelected ? "remove" : "select") this teaching subject")
-    }
-}
-
-// MARK: - Application review
-
+// MARK: - Waiting for super-admin approval
 
 struct TutorPendingApprovalView: View {
 
@@ -432,152 +309,116 @@ struct TutorPendingApprovalView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 20) {
-                reviewHeader
-                applicationSummary
-                reviewProgress
-                statusActions
-                supportCard
-                Button("Sign out") { authManager.logout() }
-                    .appFont(size: 14, weight: .medium)
-                    .foregroundColor(AppTheme.muted)
-                    .frame(minHeight: 44)
-                    .disabled(isRefreshing)
+                Spacer(minLength: 24)
+
+                ZStack {
+                    Circle()
+                        .fill(blueSoft)
+                        .frame(width: 96, height: 96)
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 38, weight: .medium))
+                        .foregroundColor(blueDeep)
+                }
+
+                VStack(spacing: 10) {
+                    Text("Application under review")
+                        .appFont(size: 22, weight: .bold)
+                        .foregroundColor(AppTheme.ink)
+                        .multilineTextAlignment(.center)
+
+                    Text("Your details were submitted successfully. A super admin will review your application.")
+                        .appFont(size: 14.5, weight: .medium)
+                        .foregroundColor(AppTheme.muted)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("How to check your result", systemImage: "info.circle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(AppTheme.ink)
+
+                    Text("Tap Check status now to see the latest decision. You can also return later using the same email and password.")
+                        .appFont(size: 13, weight: .medium)
+                        .foregroundColor(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(blueSoft.opacity(0.85))
+                )
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Not approved after 2 days?")
+                        .appFont(size: 14, weight: .bold)
+                        .foregroundColor(AppTheme.ink)
+
+                    Text(AcademySupport.approvalWaitMessage)
+                        .appFont(size: 13, weight: .medium)
+                        .foregroundColor(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    contactRow(
+                        icon: "phone.fill",
+                        title: "Call / WhatsApp",
+                        value: AcademySupport.phoneDisplay,
+                        url: AcademySupport.phoneURL
+                    )
+                    contactRow(
+                        icon: "envelope.fill",
+                        title: "Academy email",
+                        value: AcademySupport.email,
+                        url: AcademySupport.emailURL
+                    )
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .fill(AppTheme.card)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous)
+                        .stroke(blue.opacity(0.12), lineWidth: 1)
+                )
+
+                if let notice {
+                    Text(notice)
+                        .appFont(size: 13.5, weight: .medium)
+                        .foregroundColor(blueDeep)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    Task { await refresh() }
+                } label: {
+                    HStack {
+                        if isRefreshing { ProgressView() }
+                        Text(isRefreshing ? "Checking…" : "Check status now")
+                            .appFont(size: 14.5, weight: .semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 48)
+                    .background(blueSoft)
+                    .foregroundColor(blueDeep)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.controlRadius, style: .continuous))
+                }
+                .disabled(isRefreshing)
+
+                Button("Log out") {
+                    authManager.logout()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(blueDeep)
+                .padding(.bottom, 32)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 28)
             .frame(maxWidth: 680)
             .frame(maxWidth: .infinity)
         }
         .background(AppTheme.authBlueWash)
-    }
-
-    private var reviewHeader: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 36, weight: .medium))
-                .foregroundColor(blueDeep)
-                .frame(width: 88, height: 88)
-                .background(blueSoft)
-                .clipShape(Circle())
-                .accessibilityHidden(true)
-            Text("Application under review")
-                .appFont(size: 25, weight: .bold)
-                .foregroundColor(AppTheme.ink)
-                .accessibilityAddTraits(.isHeader)
-            Text("The team at the academy is reviewing your application.")
-                .appFont(size: 15, weight: .medium)
-                .foregroundColor(AppTheme.ink)
-            Text("Thank you for applying to teach at Tricon Academy. Your details have been submitted successfully.")
-                .appFont(size: 14)
-                .foregroundColor(AppTheme.muted)
-        }
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var applicationSummary: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Your application", systemImage: "person.text.rectangle")
-                .appFont(size: 16, weight: .bold)
-                .foregroundColor(AppTheme.ink)
-            if let user = authManager.currentUser {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user.fullName).appFont(size: 15, weight: .semibold)
-                    Text(user.email).appFont(size: 13).foregroundColor(AppTheme.muted)
-                }
-                let subjects = User.parseSubjectList(user.subjectMajor)
-                if !subjects.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Teaching subjects")
-                            .appFont(size: 12.5, weight: .semibold)
-                            .foregroundColor(AppTheme.muted)
-                        Text(subjects.joined(separator: " · "))
-                            .appFont(size: 14)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-        }
-        .foregroundColor(AppTheme.ink)
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard(elevated: false)
-    }
-
-    private var reviewProgress: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("What happens next")
-                .appFont(size: 16, weight: .bold)
-                .foregroundColor(AppTheme.ink)
-            reviewStep("Application received", detail: "Your details and subject choices have been submitted.", icon: "checkmark.circle.fill", active: true)
-            reviewStep("Academy review", detail: "Our team reviews your qualifications, subjects and references.", icon: "clock.fill", active: true)
-            reviewStep("Tutor access", detail: "Once approved, you can manage resources and lessons for your approved subjects.", icon: "lock.fill", active: false)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard(elevated: false)
-    }
-
-    private func reviewStep(_ title: String, detail: String, icon: String, active: Bool) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 19))
-                .foregroundColor(active ? blueDeep : AppTheme.muted)
-                .frame(width: 24, height: 24)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .appFont(size: 14, weight: .semibold)
-                    .foregroundColor(AppTheme.ink)
-                Text(detail)
-                    .appFont(size: 13)
-                    .foregroundColor(AppTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private var statusActions: some View {
-        VStack(spacing: 12) {
-            if let notice {
-                Text(notice)
-                    .appFont(size: 13.5, weight: .medium)
-                    .foregroundColor(blueDeep)
-                    .multilineTextAlignment(.center)
-            }
-            Button {
-                Task { await refresh() }
-            } label: {
-                HStack(spacing: 8) {
-                    if isRefreshing { ProgressView() }
-                    Text(isRefreshing ? "Checking…" : "Check application status")
-                }
-            }
-            .buttonStyle(AppPrimaryButtonStyle())
-            .disabled(isRefreshing)
-            Text("You can return later and sign in with the same account to check for a decision.")
-                .appFont(size: 12.5)
-                .foregroundColor(AppTheme.muted)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private var supportCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Need help with your application?")
-                .appFont(size: 15, weight: .bold)
-                .foregroundColor(AppTheme.ink)
-            Text(AcademySupport.approvalWaitMessage)
-                .appFont(size: 13)
-                .foregroundColor(AppTheme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-            contactRow(icon: "phone.fill", title: "Call the academy", value: AcademySupport.phoneDisplay, url: AcademySupport.phoneURL)
-            contactRow(icon: "envelope.fill", title: "Email the academy", value: AcademySupport.email, url: AcademySupport.emailURL)
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard(elevated: false)
     }
 
     private func contactRow(icon: String, title: String, value: String, url: URL?) -> some View {
@@ -618,7 +459,7 @@ struct TutorPendingApprovalView: View {
         } else if status == TutorApprovalStatus.rejected.rawValue {
             notice = "Your application was rejected. Opening the decision screen…"
         } else {
-            notice = "The team at the academy is still reviewing your application. Please check again later."
+            notice = "Your current status is pending approval. You can check again later."
         }
     }
 }

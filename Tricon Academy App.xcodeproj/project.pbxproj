@@ -59,14 +59,6 @@
 		A9S20003200E000200059F79 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20002200E000200059F79 /* SupabaseClient.swift */; };
 		A9S20005200E000300059F79 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S20004200E000300059F79 /* SupabaseModels.swift */; };
 		A9S30001200F000100059F79 /* ResetPasswordConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */; };
-		AC1300000000000000000000 /* LiveClassesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000000 /* LiveClassesService.swift */; };
-		AC1300000000000000000001 /* LiveClassesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000001 /* LiveClassesStore.swift */; };
-		AC1300000000000000000002 /* LiveModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000002 /* LiveModels.swift */; };
-		AC1300000000000000000003 /* LiveNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000003 /* LiveNotificationManager.swift */; };
-		AC1300000000000000000004 /* LiveVideoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000004 /* LiveVideoService.swift */; };
-		AC1300000000000000000005 /* LiveClassesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000005 /* LiveClassesView.swift */; };
-		AC1300000000000000000006 /* LiveClassroomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000006 /* LiveClassroomView.swift */; };
-		AC1300000000000000000007 /* LiveLessonDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1200000000000000000007 /* LiveLessonDetail.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,14 +136,6 @@
 		A9S20004200E000300059F79 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
 		A9S30000200F000100059F79 /* ResetPasswordConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordConfirmView.swift; sourceTree = "<group>"; };
 		A9S30002200F000200059F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		AC1200000000000000000000 /* LiveClassesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/Model/LiveClasses/LiveClassesService.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000001 /* LiveClassesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/Model/LiveClasses/LiveClassesStore.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000002 /* LiveModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/Model/LiveClasses/LiveModels.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000003 /* LiveNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/Model/LiveClasses/LiveNotificationManager.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000004 /* LiveVideoService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/Model/LiveClasses/LiveVideoService.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000005 /* LiveClassesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/views/LiveClasses/LiveClassesView.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000006 /* LiveClassroomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/views/LiveClasses/LiveClassroomView.swift"; sourceTree = SOURCE_ROOT; };
-		AC1200000000000000000007 /* LiveLessonDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tricon Academy App/views/LiveClasses/LiveLessonDetail.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -182,14 +166,6 @@
 		A60945782FFAED8F000482FF /* Curriculum */ = {
 			isa = PBXGroup;
 			children = (
-				AC1200000000000000000007 /* LiveLessonDetail.swift */,
-				AC1200000000000000000006 /* LiveClassroomView.swift */,
-				AC1200000000000000000005 /* LiveClassesView.swift */,
-				AC1200000000000000000004 /* LiveVideoService.swift */,
-				AC1200000000000000000003 /* LiveNotificationManager.swift */,
-				AC1200000000000000000002 /* LiveModels.swift */,
-				AC1200000000000000000001 /* LiveClassesStore.swift */,
-				AC1200000000000000000000 /* LiveClassesService.swift */,
 				A60945792FFAEDF3000482FF /* CurriculumModels.swift */,
 				A609457B2FFAEF77000482FF /* CurriculumData.swift */,
 			);
@@ -460,14 +436,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC1300000000000000000007 /* LiveLessonDetail.swift in Sources */,
-				AC1300000000000000000006 /* LiveClassroomView.swift in Sources */,
-				AC1300000000000000000005 /* LiveClassesView.swift in Sources */,
-				AC1300000000000000000004 /* LiveVideoService.swift in Sources */,
-				AC1300000000000000000003 /* LiveNotificationManager.swift in Sources */,
-				AC1300000000000000000002 /* LiveModels.swift in Sources */,
-				AC1300000000000000000001 /* LiveClassesStore.swift in Sources */,
-				AC1300000000000000000000 /* LiveClassesService.swift in Sources */,
 				A653EFF8300260DD00059F79 /* SavedItemsView.swift in Sources */,
 				A60945772FFA6512000482FF /* HomeView.swift in Sources */,
 				A6AD750B2FFB215800C2A92F /* UploadLessonView.swift in Sources */,
